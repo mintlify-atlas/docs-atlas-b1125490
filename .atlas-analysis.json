@@ -1,0 +1,72 @@
+{
+  "projectType": "general",
+  "projectName": "Paga con ZIGI",
+  "projectDescription": "WordPress/WooCommerce payment gateway plugin for accepting QR code payments via ZIGI in Guatemala.",
+  "theme": "almond",
+  "primaryColor": "#00A99D",
+  "lightColor": "#00D4C4",
+  "darkColor": "#007A70",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "introduction",
+          "installation",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Configuration",
+        "pages": [
+          "configuration/settings",
+          "configuration/qr-setup",
+          "configuration/payment-limits"
+        ]
+      },
+      {
+        "group": "User Guide",
+        "pages": [
+          "guide/customer-flow",
+          "guide/admin-workflow",
+          "guide/payment-verification"
+        ]
+      },
+      {
+        "group": "Development",
+        "pages": [
+          "development/hooks-filters",
+          "development/customization"
+        ]
+      },
+      {
+        "group": "Support",
+        "pages": [
+          "support/troubleshooting",
+          "support/faq",
+          "support/changelog"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "QR code payment integration with ZIGI mobile app",
+    "Payment receipt upload and verification system",
+    "Configurable payment limits and restrictions",
+    "WooCommerce integration with custom payment gateway",
+    "Admin panel for reviewing payment receipts",
+    "HPOS (High-Performance Order Storage) compatibility",
+    "Customizable messages and descriptions",
+    "Drag-and-drop receipt upload interface"
+  ],
+  "publicApiSurface": [
+    "Zigi_Payment_WC_Gateway",
+    "zigi_payment_add_gateway_class",
+    "zigi_payment_init_gateway_class",
+    "zigi_payment_hpos_compatibility",
+    "zigi_payment_qr_code_callback",
+    "zigi_payment_qr_code_upload_dir",
+    "woocommerce_payment_gateways filter",
+    "zigi-payment-qrcode order meta field"
+  ]
+}
