@@ -1,0 +1,330 @@
+---
+title: 'QR Code Setup'
+description: 'Guide for uploading and managing the ZIGI QR code image for payment processing'
+---
+
+## Overview
+
+The ZIGI QR code is the core element of the payment process. Customers scan this code with their ZIGI app to complete payments. This guide covers how to upload, preview, and manage your QR code image.
+
+## QR Code Requirements
+
+Before uploading your QR code, ensure it meets these requirements:
+
+<Note>
+  **Supported Formats:**
+  - JPG/JPEG
+  - PNG
+  - GIF
+  
+  These formats are validated in `functions.php:164`.
+</Note>
+
+<Warning>
+  Only image files are accepted. The plugin validates the file type using `wp_check_filetype_and_ext()` to ensure security.
+</Warning>
+
+### Image Best Practices
+
+- **Resolution:** Minimum 300x300 pixels for clear scanning
+- **File Size:** Keep under 500KB for fast loading
+- **Format:** PNG recommended for best quality
+- **Content:** Ensure the QR code is clear and not distorted
+- **Background:** Use a solid, contrasting background
+
+## Upload Interface
+
+The QR upload interface is implemented as a custom button field type in the plugin settings (paga-con-zigi.php:148-160).
+
+```php
+// Source: paga-con-zigi.php:148-160
+'upload_qr' => array(
+    'title'       => __('Seleccionar Imagen QR', 'paga-con-zigi'),
+    'type'        => 'button',
+    'class'       => 'kwp_upload_image_button button-secondary',
+    'label'       => 'axa',
+    'description' => __('Aquí debes subir la imagen QR.', 'paga-con-zigi'),
+    'desc_tip'    => true,
+),
+'preview_qr' => array(
+    'title'       => '',
+    'type'        => 'hidden',
+    'class'       => 'kwp_preview_qr',
+)
+```
+
+## Uploading Your QR Code
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Go to **WooCommerce → Settings → Payments → Paga con ZIGI**
+  </Step>
+  
+  <Step title="Find the QR Upload Section">
+    Scroll down to the "Seleccionar Imagen QR" field. You'll see an upload area with the text "Sube el QR aquí"
+  </Step>
+  
+  <Step title="Click to Upload">
+    Click the **"Seleccionar Imagen QR"** button. This will open the WordPress Media Library
+  </Step>
+  
+  <Step title="Select or Upload Image">
+    Either:
+    - Select an existing image from your Media Library
+    - Upload a new image by dragging and dropping or clicking "Upload files"
+  </Step>
+  
+  <Step title="Confirm Selection">
+    Click **"Usar esta imagen"** to confirm your selection
+  </Step>
+  
+  <Step title="Preview and Save">
+    The image will appear in the preview area below. Click **"Save changes"** at the bottom of the page
+  </Step>
+</Steps>
+
+## Upload Implementation
+
+The upload functionality uses the WordPress Media Library integration (assets/woopro.js:3-23):
+
+```javascript
+// Source: assets/woopro.js:3-23
+$( document ).on( 'click', '.kwp_upload_image_button', function( e ) {
+    e.preventDefault();
+  
+    var button = $( this ),
+    aw_uploader = wp.media({
+        title: 'Imagen Personalizada',
+        library : {
+            uploadedTo : wp.media.view.settings.post.id, 
+            type : 'image'
+        },
+        button: {
+            text: 'Usar esta imagen'
+        },
+        multiple: false
+    }).on( 'select', function() {
+        var attachment = aw_uploader.state().get( 'selection' ).first().toJSON();
+        $( '.preview_area' ).html('<img src="'+attachment.url+'" class="upload_qr" style="display: block; padding: 10px; width: 200px;border: 1px solid;margin-bottom: 10px;"><button class="remove_qr button-secondary" type="button">Eliminar</button>');
+        $( '.kwp_preview_qr' ).val( attachment.url );
+    })
+    .open();
+});
+```
+
+<Tip>
+  The Media Library integration allows you to reuse existing images or upload new ones, making it easy to update your QR code if needed.
+</Tip>
+
+## Preview Area
+
+After uploading, the QR code appears in a preview section (paga-con-zigi.php:196-217):
+
+```php
+// Source: paga-con-zigi.php:203-216
+<div class="preview_area">
+    <?php
+    $options = get_option('woocommerce_zigi_payment_settings');
+    if (isset($options['preview_qr']) && !empty($options['preview_qr'])) {
+    ?>
+        <img src="<?php echo esc_attr($options['preview_qr']); ?>" 
+             class="upload_qr" 
+             alt="Preview Icon" 
+             loading="lazy">
+        <button class="remove_qr button-secondary" type="button">
+            <?php esc_html_e('Eliminar', 'paga-con-zigi'); ?>
+        </button>
+    <?php } ?>
+</div>
+```
+
+The preview shows:
+- The uploaded QR code image (200px width)
+- A **"Eliminar"** (Remove) button to delete the image
+
+## Removing the QR Code
+
+To remove the current QR code:
+
+1. Click the **"Eliminar"** button below the preview image
+2. The image will be removed from the preview
+3. Click **"Save changes"** to persist the removal
+
+```javascript
+// Source: assets/woopro.js:25-30
+$( document ).on( 'click', '.remove_qr', function( e ) {
+    e.preventDefault();
+    $( '.upload_qr' ).remove();
+    $( '.kwp_preview_qr' ).val('');
+    $( this ).remove();
+});
+```
+
+<Warning>
+  Removing the QR code without uploading a replacement will prevent the payment popup from displaying the QR code to customers.
+</Warning>
+
+## QR Code Display to Customers
+
+The uploaded QR code is displayed in the payment popup (functions.php:32-38):
+
+```php
+// Source: functions.php:32-38
+<?php
+if (isset($options['preview_qr']) && !empty($options['preview_qr'])) {
+?>
+    <img src="<?php echo esc_url($options['preview_qr']); ?>" 
+         class="popup-qr" 
+         alt="Preview Image" 
+         loading="lazy" />
+<?php } ?>
+```
+
+When customers:
+1. Select "Paga con ZIGI" at checkout
+2. Click to proceed with payment
+3. A popup modal appears showing your QR code
+4. Customers scan the code with their ZIGI app
+
+## Custom Upload Directory
+
+For security and organization, customer payment receipts are stored in a custom directory (functions.php:101-126):
+
+```php
+// Source: functions.php:102-125
+function zigi_payment_qr_code_upload_dir($dirs)
+{
+    $custom_subdir = '/zigi-payment-qrcode';
+
+    $new_path = $dirs['basedir'] . $custom_subdir;
+    $new_url  = $dirs['baseurl'] . $custom_subdir;
+
+    // Create folder if it doesn't exist (using WP_Filesystem)
+    global $wp_filesystem;
+    if (! $wp_filesystem) {
+        require_once ABSPATH . '/wp-admin/includes/file.php';
+        WP_Filesystem();
+    }
+    if (! $wp_filesystem->is_dir($new_path)) {
+        $wp_filesystem->mkdir($new_path);
+        $wp_filesystem->put_contents($new_path . '/index.html', '', FS_CHMOD_FILE);
+    }
+
+    return array_merge($dirs, array(
+        'path'   => $new_path,
+        'url'    => $new_url,
+        'subdir' => $custom_subdir,
+    ));
+}
+```
+
+<Note>
+  The admin QR code uses the standard WordPress Media Library. The custom directory is only used for customer-uploaded payment receipts.
+</Note>
+
+## Security Considerations
+
+The plugin implements several security measures:
+
+### File Type Validation
+
+```php
+// Source: functions.php:161-166
+$check = wp_check_filetype_and_ext($file['tmp_name'], $file['name']);
+$ext = $check['ext'];
+
+if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) {
+    wp_send_json_error('error: Tipo de archivo inválido. Solo se permiten JPG, JPEG y PNG.', 400);
+}
+```
+
+### Nonce Verification
+
+For customer uploads (functions.php:132-135):
+
+```php
+$wp_nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+if (!$wp_nonce || !wp_verify_nonce($wp_nonce, 'zigi_payment_qr_nonce')) {
+    wp_send_json_error('Nonce inválido.', 403);
+}
+```
+
+### File Upload Validation
+
+```php
+// Source: functions.php:157-159
+if (!is_uploaded_file($file['tmp_name'])) {
+    wp_send_json_error('Carga inválida.', 400);
+}
+```
+
+## Troubleshooting
+
+### QR Code Not Appearing in Popup
+
+**Possible causes:**
+1. QR code not saved properly
+2. Image URL is invalid
+3. File was deleted from server
+
+**Solution:**
+- Re-upload the QR code
+- Check the preview area shows the image
+- Save settings again
+
+### Media Library Button Not Working
+
+**Possible causes:**
+1. JavaScript conflicts with other plugins
+2. WordPress media scripts not loaded
+
+**Solution:**
+- Check browser console for JavaScript errors
+- Temporarily disable other plugins to identify conflicts
+- Ensure WordPress is up to date
+
+### Upload Fails with Error
+
+**Possible causes:**
+1. File size exceeds server limits
+2. File type not supported
+3. Permission issues with uploads directory
+
+**Solution:**
+- Check file meets requirements (JPG, PNG, or GIF)
+- Verify PHP `upload_max_filesize` setting
+- Check WordPress uploads directory permissions (should be 755)
+
+## Testing Your QR Code
+
+<Steps>
+  <Step title="Save Settings">
+    After uploading, ensure you click **"Save changes"**
+  </Step>
+  
+  <Step title="Add Product to Cart">
+    Add a product to your cart and proceed to checkout
+  </Step>
+  
+  <Step title="Select ZIGI Payment">
+    Choose "Paga con ZIGI" as the payment method
+  </Step>
+  
+  <Step title="Verify QR Display">
+    The payment popup should appear showing your QR code clearly
+  </Step>
+  
+  <Step title="Test Scanning">
+    Use your ZIGI app to scan the code and verify it works correctly
+  </Step>
+</Steps>
+
+<Tip>
+  Always test the complete payment flow after uploading or changing your QR code to ensure customers can successfully complete payments.
+</Tip>
+
+## Related Documentation
+
+- [Plugin Settings](/configuration/settings) - Configure all plugin options
+- [Payment Limits](/configuration/payment-limits) - Set payment amount restrictions
+- [Quickstart Guide](/quickstart) - Initial setup instructions

@@ -1,0 +1,237 @@
+---
+title: 'Plugin Settings'
+description: 'Complete guide to configuring all Paga con ZIGI payment gateway settings'
+---
+
+## Overview
+
+The Paga con ZIGI plugin provides a comprehensive settings interface to customize the payment gateway experience. All settings are configured through WooCommerce's payment gateway settings page at **WooCommerce → Settings → Payments → Paga con ZIGI**.
+
+## Accessing Settings
+
+<Steps>
+  <Step title="Navigate to WooCommerce Settings">
+    Go to your WordPress admin dashboard and navigate to **WooCommerce → Settings**
+  </Step>
+  
+  <Step title="Open Payments Tab">
+    Click on the **Payments** tab at the top of the settings page
+  </Step>
+  
+  <Step title="Configure Paga con ZIGI">
+    Find **Paga con ZIGI** in the payment methods list and click **Manage** or **Set up**
+  </Step>
+</Steps>
+
+## Configuration Fields
+
+The plugin settings are defined in the `init_form_fields()` method of the `Zigi_Payment_WC_Gateway` class (paga-con-zigi.php:96-162).
+
+### Enable/Disable
+
+<ParamField path="enabled" type="checkbox" default="no">
+  Controls whether the ZIGI payment method is available at checkout.
+  
+  **Field Properties:**
+  - **Title:** "Habilitar/Deshabilitar"
+  - **Label:** "Habilitar Paga con ZIGI"
+  - **Type:** `checkbox`
+  - **Default:** `no`
+  
+  When enabled, customers will see ZIGI as a payment option during checkout.
+</ParamField>
+
+### Payment Method Title
+
+<ParamField path="title" type="text" default="Paga con ZIGI">
+  The title displayed to customers during checkout.
+  
+  **Field Properties:**
+  - **Title:** "Título"
+  - **Type:** `text`
+  - **Default:** `Paga con ZIGI`
+  - **Description:** "Esto controla el título que el usuario ve durante el pago."
+  
+  This appears as the payment method name in the checkout page payment options list.
+</ParamField>
+
+```php
+// Source: paga-con-zigi.php:107-113
+'title' => array(
+    'title'       => __('Título', 'paga-con-zigi'),
+    'type'        => 'text',
+    'description' => __('Esto controla el título que el usuario ve durante el pago.', 'paga-con-zigi'),
+    'default'     => __('Paga con ZIGI', 'paga-con-zigi'),
+    'desc_tip'    => true,
+)
+```
+
+### Payment Method Description
+
+<ParamField path="description" type="textarea" default="Método de pago vía QR ZIGI...">
+  The description shown below the payment method title at checkout.
+  
+  **Field Properties:**
+  - **Title:** "Descripción"
+  - **Type:** `textarea`
+  - **Default:** "Método de pago vía QR ZIGI. Al realizar el pago, debes adjuntar el comprobante con la orden de compra."
+  - **Description:** "Esto controla la descripción que el usuario ve durante el pago."
+  
+  <Tip>
+    Keep this description concise but informative. Explain that customers need to scan the QR code and upload proof of payment.
+  </Tip>
+</ParamField>
+
+```php
+// Source: paga-con-zigi.php:114-120
+'description' => array(
+    'title'       => __('Descripción', 'paga-con-zigi'),
+    'type'        => 'textarea',
+    'description' => __('Esto controla la descripción que el usuario ve durante el pago.', 'paga-con-zigi'),
+    'default'     => __('Método de pago vía QR ZIGI. Al realizar el pago, debes adjuntar el comprobante con la orden de compra.', 'paga-con-zigi'),
+    'desc_tip'    => true,
+)
+```
+
+### Popup Description
+
+<ParamField path="front_description" type="textarea" default="Debes escanear el código QR...">
+  Instructions displayed in the payment popup modal that appears when customers select ZIGI payment.
+  
+  **Field Properties:**
+  - **Title:** "Descripción del Popup"
+  - **Type:** `textarea`
+  - **Default:** "Debes escanear el código QR, hacer clic en continuar para adjuntar la captura (es el único comprobante de pago) y podrás completar la compra."
+  
+  This text appears in the popup alongside the QR code to guide customers through the payment process.
+</ParamField>
+
+```php
+// Source: paga-con-zigi.php:121-126
+'front_description' => array(
+    'title'       => __('Descripción del Popup', 'paga-con-zigi'),
+    'type'        => 'textarea',
+    'default'     => __('Debes escanear el código QR, hacer clic en continuar para adjuntar la captura (es el único comprobante de pago) y podrás completar la compra.', 'paga-con-zigi'),
+    'desc_tip'    => true,
+)
+```
+
+<Note>
+  The popup description is rendered in `functions.php:43-45` and displayed in the payment modal when customers click to pay with ZIGI.
+</Note>
+
+### Phone Number Configuration
+
+<ParamField path="number_telephone" type="text" required>
+  The phone number affiliated with your ZIGI account in Guatemala.
+  
+  **Field Properties:**
+  - **Title:** "Número de Teléfono Afiliado"
+  - **Type:** `text`
+  - **Default:** (empty)
+  - **Description:** "Ingresa el número afiliado a ZIGI (Guatemala)."
+  
+  <Warning>
+    This phone number will be displayed as a clickable link in the payment popup, allowing customers to add the contact to their phone for easier transfers.
+  </Warning>
+</ParamField>
+
+```php
+// Source: paga-con-zigi.php:141-147
+'number_telephone' => array(
+    'title'       => __('Número de Teléfono Afiliado', 'paga-con-zigi'),
+    'type'        => 'text',
+    'description' => __('Ingresa el número afiliado a ZIGI (Guatemala).', 'paga-con-zigi'),
+    'default'     => '',
+    'desc_tip'    => true,
+)
+```
+
+**Phone Number Display:**
+
+The phone number is displayed in the payment popup with a clickable `tel:` link (functions.php:36-38):
+
+```php
+<?php if (isset($options['number_telephone']) && !empty($options['number_telephone'])) { ?>
+    <span class="telephone-number">
+        <a href="tel:<?php echo esc_attr($options['number_telephone']); ?>">
+            <?php esc_html_e('Agregar Contacto:', 'paga-con-zigi'); ?> 
+            <?php echo esc_attr($options['number_telephone']); ?>
+        </a>
+    </span>
+<?php } ?>
+```
+
+## Settings Storage
+
+All settings are stored in the WordPress options table under the key `woocommerce_zigi_payment_settings`. The settings are loaded in the gateway constructor (paga-con-zigi.php:84-87):
+
+```php
+// Load the settings.
+$this->init_settings();
+$this->title = $this->get_option('title');
+$this->description = $this->get_option('description');
+$this->enabled = $this->get_option('enabled');
+```
+
+## Saving Settings
+
+Settings are automatically saved when you click the **Save changes** button at the bottom of the settings page. The save action is hooked in the constructor:
+
+```php
+// Source: paga-con-zigi.php:90
+add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
+```
+
+## Best Practices
+
+<Accordion title="Recommended Title">
+  Use a clear, recognizable title like "Paga con ZIGI" or "Pago QR ZIGI" so customers immediately understand the payment method.
+</Accordion>
+
+<Accordion title="Effective Description">
+  Your description should:
+  - Mention that it's a QR code payment method
+  - Indicate that customers will need to upload proof of payment
+  - Be concise (1-2 sentences maximum)
+</Accordion>
+
+<Accordion title="Clear Popup Instructions">
+  The popup description should provide step-by-step guidance:
+  1. Scan the QR code with the ZIGI app
+  2. Complete the payment in the app
+  3. Take a screenshot of the confirmation
+  4. Upload the screenshot as proof
+</Accordion>
+
+<Accordion title="Phone Number Format">
+  Enter the phone number in a format that's valid for Guatemala, typically:
+  - `+502 XXXX-XXXX` (with country code)
+  - `XXXX-XXXX` (local format)
+</Accordion>
+
+## Troubleshooting
+
+### Settings Not Saving
+
+If your settings are not being saved:
+
+1. Check that you have proper WordPress permissions
+2. Verify there are no JavaScript errors in the browser console
+3. Ensure WooCommerce is active and up to date
+4. Check for conflicts with other plugins by temporarily disabling them
+
+### Phone Number Not Displaying
+
+The phone number only appears in the popup if:
+- The field is not empty
+- The customer has selected ZIGI as their payment method
+- The payment popup is displayed
+
+Verify the field is properly filled in the settings page.
+
+## Related Documentation
+
+- [QR Setup](/configuration/qr-setup) - Configure the ZIGI QR code image
+- [Payment Limits](/configuration/payment-limits) - Set minimum and maximum payment amounts
+- [Quickstart Guide](/quickstart) - Initial plugin setup

@@ -1,80 +1,523 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get from installation to accepting your first ZIGI payment in minutes
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through the complete setup process from activating the plugin to accepting your first ZIGI payment. You'll learn how to configure the payment gateway, upload your QR code, and test the payment flow.
 
-### Step 1: Set up your local environment
+<Info>
+  **Estimated Time**: 10-15 minutes
+  
+  Make sure you have your ZIGI QR code image ready before starting.
+</Info>
+
+## Step 1: Access Payment Settings
+
+After installing and activating the plugin, configure the payment gateway:
+
+<Steps>
+  <Step title="Navigate to WooCommerce Settings">
+    From your WordPress admin dashboard:
+    
+    Go to **WooCommerce → Settings → Payments**
+    
+    You should see "Paga con ZIGI" listed among available payment methods
+  </Step>
+  
+  <Step title="Access ZIGI Settings">
+    Locate **Paga con ZIGI** in the payment methods list
+    
+    Click **Manage** or **Set up** to open the configuration page
+    
+    <Note>
+      The payment method is disabled by default. You'll enable it after configuration.
+    </Note>
+  </Step>
+</Steps>
+
+## Step 2: Basic Configuration
+
+Configure the essential settings for your payment gateway:
+
+<Steps>
+  <Step title="Enable the Payment Method">
+    Check the box for **"Habilitar Paga con ZIGI"** (Enable Paga con ZIGI)
+    
+    This makes the payment method visible at checkout
+  </Step>
+  
+  <Step title="Set Payment Title">
+    **Field**: Título (Title)
+    
+    **Default**: "Paga con ZIGI"
+    
+    This is what customers see as the payment method name at checkout
+    
+    ```text
+    Example: Paga con ZIGI - Código QR
+    ```
+    
+    <Tip>
+      Keep the title clear and recognizable. Most users keep the default.
+    </Tip>
+  </Step>
+  
+  <Step title="Configure Checkout Description">
+    **Field**: Descripción (Description)
+    
+    **Default**: "Método de pago vía QR ZIGI. Al realizar el pago, debes adjuntar el comprobante con la orden de compra."
+    
+    This appears below the payment method at checkout
+    
+    ```text
+    Example: Escanea el código QR con tu app ZIGI y completa el pago. 
+    Recuerda adjuntar tu comprobante de pago.
+    ```
+  </Step>
+  
+  <Step title="Set Popup Description">
+    **Field**: Descripción del Popup (Popup Description)
+    
+    **Default**: "Debes escanear el código QR, hacer clic en continuar para adjuntar la captura (es el único comprobante de pago) y podrás completar la compra."
+    
+    This appears in the payment popup modal shown to customers
+    
+    <Note>
+      This is crucial for guiding customers through the payment process
+    </Note>
+  </Step>
+</Steps>
+
+## Step 3: Upload Your ZIGI QR Code
+
+The QR code is the most important element - customers will scan it to make payments:
+
+<Steps>
+  <Step title="Locate QR Upload Section">
+    Scroll to **"Seleccionar Imagen QR"** (Select QR Image)
+    
+    Click the upload area or **"Sube el QR aquí"** button
+  </Step>
+  
+  <Step title="Select Your QR Code Image">
+    The WordPress media library will open
+    
+    - **Upload new**: Click "Upload files" and select your ZIGI QR code image
+    - **Use existing**: Select a previously uploaded QR code
+    
+    Supported formats: JPG, PNG, GIF
+    
+    <Warning>
+      Make sure your QR code is clear and scannable. Test it with your ZIGI app before uploading.
+    </Warning>
+  </Step>
+  
+  <Step title="Verify QR Preview">
+    After selecting, the QR code should appear in the **"Vista Previa"** (Preview) section
+    
+    Verify that:
+    - The image is clear and readable
+    - The QR code is correctly oriented
+    - No important parts are cut off
+    
+    <Tip>
+      Click the preview image to view it full-size and ensure quality
+    </Tip>
+  </Step>
+</Steps>
+
+### QR Code Best Practices
+
+- **Resolution**: Use at least 500x500 pixels for clarity
+- **Format**: PNG recommended for best quality
+- **Background**: Ensure good contrast between QR code and background
+- **Testing**: Always test the QR code with the ZIGI app before going live
+
+## Step 4: Configure Advanced Settings (Optional)
+
+Customize additional settings based on your business needs:
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+  <Accordion title="Set Payment Amount Limits" icon="gauge-high">
+    Restrict payments to specific amount ranges:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
+    **Monto Límite (Amount Limit)**
+    ```text
+    Example: 500
+    ```
+    
+    This sets a maximum payment amount (e.g., 500 GTQ per transaction)
+    
+    **Mensaje de Monto Límite (Limit Message)**
+    ```text
+    Example: Este método no permite pagos mayores a 500 por día.
+    ```
+    
+    This message displays when the cart total exceeds the limit
+    
+    <Note>
+      Leave empty if you don't want to set payment limits
+    </Note>
   </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+  
+  <Accordion title="Add Affiliated Phone Number" icon="phone">
+    Display your ZIGI-affiliated phone number for customer support:
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+    **Número de Teléfono Afiliado**
+    ```text
+    Example: +502 1234-5678
+    ```
+    
+    This creates a clickable link in the payment popup:
+    ```html
+    Agregar Contacto: +502 1234-5678
+    ```
+    
+    Customers can click to add your number or call directly
+    
+    <Tip>
+      Include country code for international format: +502 for Guatemala
+    </Tip>
+  </Accordion>
+  
+  <Accordion title="Customize Payment Icon" icon="image">
+    Add a custom icon next to the payment method name at checkout:
+    
+    The icon appears in the `$this->icon` property:
+    
+    ```php
+    $this->icon = ''; // Currently no default icon
+    ```
+    
+    To add a custom icon, you can modify the code or use a filter hook
   </Accordion>
 </AccordionGroup>
 
-### Step 2: Deploy your changes
+## Step 5: Save Settings
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+Finalize your configuration:
+
+<Steps>
+  <Step title="Review All Settings">
+    Scroll through the page and verify:
+    - ✅ Payment method is enabled
+    - ✅ Title and descriptions are set
+    - ✅ QR code is uploaded and previews correctly
+    - ✅ Optional settings configured (if needed)
+  </Step>
+  
+  <Step title="Save Changes">
+    Click **"Save changes"** at the bottom of the page
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    You should see a success message:
+    ```
+    Your settings have been saved.
+    ```
+  </Step>
+  
+  <Step title="Verify Payment Method is Active">
+    Return to **WooCommerce → Settings → Payments**
+    
+    Confirm "Paga con ZIGI" shows a green checkmark or "Enabled" status
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Step 6: Test the Payment Flow
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Before accepting real payments, test the complete flow:
 
-### Step 3: Go live
+<Steps>
+  <Step title="Create a Test Order">
+    1. Visit your store's frontend
+    2. Add a product to cart
+    3. Proceed to checkout
+    4. Fill in billing details (use test data)
+  </Step>
+  
+  <Step title="Select Paga con ZIGI">
+    At the payment methods section:
+    
+    - You should see "Paga con ZIGI" as an option
+    - The description you configured appears below it
+    - Select the radio button to choose this payment method
+    
+    <Warning>
+      If you don't see the payment method, verify:
+      - Plugin is activated
+      - Payment method is enabled in settings
+      - WooCommerce cache is cleared
+    </Warning>
+  </Step>
+  
+  <Step title="Place Order and View Popup">
+    Click **"Place order"** button
+    
+    A popup modal should appear displaying:
+    - Your uploaded QR code
+    - Total amount to pay
+    - Your phone number (if configured)
+    - Payment instructions
+    
+    ```javascript
+    // The popup is triggered by frontend JavaScript
+    // Located in: assets/woopro-front.js
+    ```
+  </Step>
+  
+  <Step title="Simulate Payment">
+    For testing purposes:
+    
+    1. Take a screenshot of any payment (or use a sample image)
+    2. Click **"Continuar"** (Continue) in the popup
+    3. Upload the test image via drag-and-drop or file selector
+    4. Click **"Completar Compra"** (Complete Purchase)
+    
+    <Info>
+      The AJAX upload handler validates that only image files (JPG, PNG, GIF) are accepted
+    </Info>
+  </Step>
+  
+  <Step title="Verify Order Creation">
+    After completing the test:
+    
+    - You should be redirected to the order received page
+    - Order status should be **"On hold"** (awaiting payment verification)
+    - Check **WooCommerce → Orders** to see the new order
+  </Step>
+  
+  <Step title="Check Payment Receipt">
+    Open the test order in admin:
+    
+    1. Go to **WooCommerce → Orders**
+    2. Click on your test order
+    3. Scroll to the **"Comprobante de Pago QR"** meta box
+    4. Verify the uploaded receipt image appears
+    
+    ```php
+    // Receipt stored in order meta:
+    $zigi_payment_qrcode = $order->get_meta('zigi-payment-qrcode', true);
+    ```
+    
+    <Tip>
+      Click the receipt image to view it in a new tab at full resolution
+    </Tip>
+  </Step>
+</Steps>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+## Understanding the Payment Flow
 
-## Next steps
+Here's what happens behind the scenes:
 
-Now that you have your docs running, explore these key features:
+### Frontend Process
 
-<CardGroup cols={2}>
+```javascript
+// 1. Customer selects payment method
+// 2. Popup displays QR code from settings:
+var popup_qr = options.preview_qr; // From WooCommerce settings
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+// 3. Customer uploads receipt via AJAX:
+wp_ajax_zigi_payment_qr_code
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+// 4. Receipt URL stored in hidden field:
+<input type="hidden" name="zigi-payment-qrcode" id="zigi-payment-qrcode" value="uploaded_url" />
+```
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+### Backend Processing
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+```php
+public function process_payment($order_id)
+{
+    $order = wc_get_order($order_id);
+    
+    // Store receipt URL in order meta
+    if (isset($_POST['zigi-payment-qrcode']) && !empty($_POST['zigi-payment-qrcode'])) {
+        $order->update_meta_data('zigi-payment-qrcode', esc_url_raw($_POST['zigi-payment-qrcode']));
+        $order->save();
+    }
+    
+    // Set order to on-hold status
+    $order->update_status('on-hold', __('Esperando pago offline', 'paga-con-zigi'));
+    
+    // Reduce stock and empty cart
+    $order->reduce_order_stock();
+    WC()->cart->empty_cart();
+    
+    // Redirect to thank you page
+    return array(
+        'result'    => 'success',
+        'redirect'  => $this->get_return_url($order)
+    );
+}
+```
 
-</CardGroup>
+## Managing Orders
+
+After customers place orders, here's how to manage them:
+
+<Steps>
+  <Step title="View Pending Orders">
+    Navigate to **WooCommerce → Orders**
+    
+    Filter by status: **"On hold"**
+    
+    These are orders awaiting payment verification
+  </Step>
+  
+  <Step title="Verify Payment Receipt">
+    Open an order and check the **"Comprobante de Pago QR"** meta box
+    
+    Verify the payment receipt shows:
+    - Correct amount
+    - Valid ZIGI transaction
+    - Timestamp matches order date
+  </Step>
+  
+  <Step title="Update Order Status">
+    After verifying payment:
+    
+    - Change status to **"Processing"** or **"Completed"**
+    - Add an order note confirming payment verification
+    - Customer receives automatic email notification
+  </Step>
+</Steps>
+
+### Automated Status Updates
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  This plugin does **not** automatically verify payments. Manual verification is required to ensure payment authenticity before fulfillment.
 </Note>
+
+For automated verification, you would need to integrate with ZIGI's API (if available).
+
+## Common Configuration Examples
+
+<CodeGroup>
+
+```text Basic Setup
+Título: Paga con ZIGI
+Descripción: Escanea el código QR con tu app ZIGI
+Monto Límite: (empty - no limit)
+Teléfono: (empty)
+```
+
+```text With Amount Limit
+Título: Paga con ZIGI (Máx. Q500)
+Descripción: Método de pago QR - máximo Q500 por transacción
+Monto Límite: 500
+Mensaje Límite: Este método solo permite pagos hasta Q500.00
+Teléfono: +502 1234-5678
+```
+
+```text Business Setup
+Título: Pago QR ZIGI
+Descripción: Pago rápido y seguro respaldado por Banco Industrial
+Descripción Popup: 
+  1. Escanea el código QR con tu app ZIGI
+  2. Completa el pago
+  3. Adjunta tu comprobante
+  4. ¡Listo!
+Teléfono: +502 9999-8888
+```
+
+</CodeGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="QR code doesn't display in popup">
+    **Possible causes:**
+    
+    1. QR image not uploaded correctly
+    2. JavaScript not loading
+    3. Theme conflict
+    
+    **Solutions:**
+    
+    - Re-upload QR code and save settings
+    - Check browser console for JavaScript errors
+    - Test with a default WordPress theme
+    - Clear browser and server cache
+  </Accordion>
+  
+  <Accordion title="Receipt upload fails">
+    **Error**: "error: Tipo de archivo inválido"
+    
+    **Solution:**
+    
+    Only JPG, JPEG, PNG, and GIF formats are accepted:
+    
+    ```php
+    if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) {
+        wp_send_json_error('error: Tipo de archivo inválido...');
+    }
+    ```
+    
+    Convert other formats before uploading.
+  </Accordion>
+  
+  <Accordion title="Payment method not showing at checkout">
+    **Check these items:**
+    
+    1. ✅ Plugin activated
+    2. ✅ Payment method enabled in settings
+    3. ✅ Cart total within configured limits
+    4. ✅ WooCommerce properly configured
+    
+    **Debug code:**
+    
+    ```php
+    // Check if gateway is enabled
+    $gateways = WC()->payment_gateways->get_available_payment_gateways();
+    var_dump(isset($gateways['zigi_payment']));
+    ```
+  </Accordion>
+  
+  <Accordion title="Receipt not visible in order admin">
+    **Verify:**
+    
+    - Order meta exists:
+    ```php
+    $receipt = get_post_meta($order_id, 'zigi-payment-qrcode', true);
+    echo $receipt; // Should show URL
+    ```
+    
+    - File uploaded successfully to `/wp-content/uploads/zigi-payment-qrcode/`
+    - Meta box registered for HPOS compatibility
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration Guide" icon="gear" href="/configuration/settings">
+    Explore advanced configuration options
+  </Card>
+  <Card title="Customization" icon="paintbrush" href="/development/customization">
+    Learn how to customize appearance and behavior
+  </Card>
+  <Card title="Hooks & Filters" icon="code" href="/development/hooks-filters">
+    Developer documentation for hooks and filters
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/support/troubleshooting">
+    Detailed solutions for common issues
+  </Card>
+</CardGroup>
+
+## Support Resources
+
+Need help? Here are your support options:
+
+- **Email**: clientes@neopunto.com
+- **Website**: [https://neopunto.com](https://neopunto.com)
+- **Complete Guide**: [ZIGI Payment Setup Guide](https://neopunto.com/guia-de-como-cobrar-con-zigi-mediante-codigo-qr-en-wordpress-gratis/)
+
+<Tip>
+  For the best support experience, include:
+  - WordPress version
+  - WooCommerce version
+  - PHP version
+  - Description of the issue
+  - Screenshots or error messages
+</Tip>

@@ -1,0 +1,859 @@
+---
+title: Frequently Asked Questions
+description: Common questions about the Paga con ZIGI payment gateway for WooCommerce
+---
+
+## General Questions
+
+<AccordionGroup>
+  <Accordion title="What is ZIGI?">
+    
+ZIGI is a mobile payment application used in Guatemala that allows users to make payments by scanning QR codes. It's backed by Banco Industrial and provides a secure way to transfer money digitally.
+
+The Paga con ZIGI plugin enables your WooCommerce store to accept payments through ZIGI's QR code system. Customers scan your QR code with the ZIGI app, complete the payment, and upload a receipt to confirm the transaction.
+
+**Key features:**
+- QR code-based payments
+- No complex API integration required
+- Low transaction fees
+- Popular in Guatemala
+- Backed by Banco Industrial
+
+<Note>
+ZIGI is specifically designed for the Guatemalan market. This payment method is most suitable for stores serving customers in Guatemala.
+</Note>
+
+  </Accordion>
+
+  <Accordion title="How does the payment process work?">
+    
+The Paga con ZIGI plugin functions similarly to a bank transfer payment method. Here's the complete workflow:
+
+**1. Customer selects payment method**
+- At checkout, customer chooses "Paga con ZIGI"
+- Clicks "Place Order" button
+
+**2. QR code is displayed**
+- A popup modal appears showing your ZIGI QR code
+- The total amount to pay is displayed
+- Optional: Your affiliated phone number is shown
+
+**3. Customer makes payment**
+- Customer opens ZIGI app on their phone
+- Scans the QR code from the popup
+- Completes payment in the ZIGI app
+- Takes a screenshot of the payment receipt
+
+**4. Receipt upload**
+- Customer clicks "Continuar" (Continue) in the popup
+- Uploads the payment receipt screenshot
+- Can drag and drop or select file
+- Only image files (JPG, PNG, GIF) are accepted
+
+**5. Order placement**
+- Order is created with "On Hold" status
+- Receipt is attached to the order
+- Customer receives order confirmation
+- Cart is emptied
+
+**6. Admin verification**
+- Store admin reviews the receipt in order details
+- Verifies payment was received in ZIGI account
+- Manually updates order status to "Processing" or "Completed"
+
+<Warning>
+This is a **manual payment verification** system. Orders are not automatically completed. You must verify each payment receipt and update order status manually.
+</Warning>
+
+  </Accordion>
+
+  <Accordion title="What are the system requirements?">
+    
+**WordPress Requirements:**
+- WordPress 5.2 or higher
+- Tested up to WordPress 6.6
+
+**WooCommerce Requirements:**
+- WooCommerce plugin must be installed and active
+- Tested up to WooCommerce 9.3
+- Compatible with WooCommerce High-Performance Order Storage (HPOS)
+
+**PHP Requirements:**
+- PHP 7.4 or higher
+- Required PHP extensions:
+  - `fileinfo` (for file type validation)
+  - `gd` or `imagick` (for image handling)
+
+**Server Requirements:**
+- File upload support enabled
+- Writable `wp-content/uploads/` directory
+- No strict file upload restrictions
+- Standard WordPress filesystem access
+
+**Browser Requirements (for customers):**
+- Modern browser with JavaScript enabled
+- Support for HTML5 drag and drop (for receipt upload)
+- Cookies enabled
+
+**ZIGI Account Requirements:**
+- Active ZIGI account in Guatemala
+- QR code for receiving payments
+- Phone number affiliated with ZIGI (optional but recommended)
+
+<Tip>
+You can check your WordPress environment at `WooCommerce > Status > System Status` to verify all requirements are met.
+</Tip>
+
+  </Accordion>
+
+  <Accordion title="Does it work with the latest WordPress and WooCommerce versions?">
+    
+**Current Compatibility:**
+
+The plugin version 2.0.0 has been tested with:
+- **WordPress:** Up to version 6.6
+- **WooCommerce:** Up to version 9.3
+- **PHP:** 7.4 and higher
+
+**WordPress Compatibility:**
+
+The plugin requires WordPress 5.2 as minimum and is actively tested with the latest versions. It uses standard WordPress APIs that are stable across versions:
+- `wp_handle_upload()` for file uploads
+- `wp_enqueue_script()` / `wp_enqueue_style()` for assets
+- `add_action()` / `add_filter()` for hooks
+- WordPress Filesystem API
+
+**WooCommerce Compatibility:**
+
+The plugin extends `WC_Payment_Gateway`, which is a stable API. Key compatibility features:
+- Declares WooCommerce as required plugin dependency
+- Compatible with both traditional and HPOS order storage
+- Uses WooCommerce order meta API
+- Follows WooCommerce payment gateway standards
+
+**High-Performance Order Storage (HPOS):**
+
+Fully compatible! The plugin declares HPOS compatibility:
+```php
+\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
+    'custom_order_tables', 
+    __FILE__, 
+    true
+);
+```
+
+**Future Updates:**
+
+While the plugin is tested up to WordPress 6.6 and WooCommerce 9.3, it should continue working with newer versions as it uses stable, well-documented APIs.
+
+<Note>
+If you're using a newer version of WordPress or WooCommerce than tested, the plugin should still work. However, always test on a staging environment first before updating production sites.
+</Note>
+
+  </Accordion>
+
+  <Accordion title="Is the plugin compatible with HPOS (High-Performance Order Storage)?">
+    
+**Yes**, the plugin is fully compatible with WooCommerce's High-Performance Order Storage (HPOS).
+
+**What is HPOS?**
+
+HPOS is WooCommerce's modern order storage system that uses custom database tables instead of WordPress posts. It provides:
+- Better performance for stores with many orders
+- Faster order queries
+- Improved scalability
+- Available in WooCommerce 7.0+
+
+**How the plugin ensures HPOS compatibility:**
+
+**1. Declares compatibility**
+
+At initialization (`paga-con-zigi.php:39-46`), the plugin explicitly declares HPOS support:
+```php
+add_action('before_woocommerce_init', function() {
+    if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
+            'custom_order_tables', 
+            __FILE__, 
+            true
+        );
+    }
+});
+```
+
+**2. Uses WooCommerce order meta API**
+
+Receipt data is stored using HPOS-compatible methods:
+```php
+$order->update_meta_data('zigi-payment-qrcode', $url);
+$order->save();
+```
+
+**3. Meta box registration**
+
+The receipt display works with both systems (`functions.php:207-211`):
+- Traditional orders: `shop_order` post type
+- HPOS orders: `woocommerce_page_wc-orders` screen
+
+**Testing HPOS:**
+
+You can safely enable HPOS in:
+```
+WooCommerce > Settings > Advanced > Features
+```
+
+The plugin will work seamlessly with:
+- Traditional post-based orders
+- HPOS custom table orders
+- Mixed environments during migration
+
+<Tip>
+WooCommerce provides a migration tool to convert traditional orders to HPOS. The plugin's receipt data will be preserved during migration.
+</Tip>
+
+  </Accordion>
+
+  <Accordion title="What file types are accepted for payment receipts?">
+    
+**Accepted File Types:**
+
+The plugin accepts **image files only**:
+- **JPG / JPEG** - Recommended for photos
+- **PNG** - Best for screenshots
+- **GIF** - Supported but not recommended
+
+**File Validation:**
+
+Receipts are validated at multiple levels:
+
+**1. Client-side validation** (`woopro-front.js:52`)
+- Checks MIME type matches `image/*`
+- Validates before upload starts
+- Provides immediate feedback to user
+
+**2. Server-side validation** (`functions.php:161-166`)
+- Uses `wp_check_filetype_and_ext()` for secure validation
+- Checks actual file content, not just extension
+- Only allows: `jpg`, `jpeg`, `png`, `gif`
+- Returns error if invalid type
+
+**Why only images?**
+
+Security and practicality:
+- Prevents upload of executable files (.php, .exe, etc.)
+- Customers typically screenshot their ZIGI app
+- Images can be previewed directly in admin
+- Reduces security risks
+
+**File Size Limits:**
+
+File size is limited by your PHP configuration:
+```ini
+upload_max_filesize = 10M  # Maximum file size
+post_max_size = 10M        # Maximum POST data
+```
+
+Typical receipt screenshots are:
+- Size: 50KB - 2MB
+- Dimensions: 1080x1920 (phone screenshot)
+
+**File Naming:**
+
+Uploaded files are automatically renamed (`functions.php:180-182`):
+```
+original-name-1234567890.jpg
+```
+
+This prevents:
+- File name conflicts
+- Security issues from special characters
+- Overwrites of existing files
+
+<Warning>
+**PDF files are NOT supported.** If customers need to upload PDFs, they should take a screenshot of the PDF or convert it to an image first.
+</Warning>
+
+  </Accordion>
+
+  <Accordion title="How and where are payment receipts stored?">
+    
+**Storage Location:**
+
+Receipts are stored in a custom directory:
+```
+wp-content/uploads/zigi-payment-qrcode/
+```
+
+**Directory Creation:**
+
+The directory is automatically created when the first receipt is uploaded (`functions.php:102-126`):
+- Created using WordPress Filesystem API
+- Permissions set to `755` (readable but not writable by public)
+- Includes `index.html` file to prevent directory listing
+
+**File Organization:**
+
+Each receipt:
+- Has a unique filename: `original-name-timestamp.jpg`
+- Timestamp prevents overwrites: `1234567890`
+- Stored directly in the custom directory (no subdirectories)
+
+**Database References:**
+
+The file URL is stored in two places:
+
+**1. Order meta data:**
+```php
+Meta key: 'zigi-payment-qrcode'
+Meta value: 'https://example.com/wp-content/uploads/zigi-payment-qrcode/receipt-1234567890.jpg'
+```
+
+**2. Hidden checkout field:**
+
+Temporarily stored in `#zigi-payment-qrcode` input during checkout, then saved to order.
+
+**Access Control:**
+
+Receipts are accessible via:
+- **Admin:** Meta box on order edit page
+- **Customer:** Not directly accessible after order placement
+- **Public:** URL is obscure but technically accessible if known
+
+**Security Measures:**
+
+1. **Directory index disabled:**
+   - `index.html` prevents listing all receipts
+   
+2. **Nonce verification:**
+   - Upload requires valid WordPress nonce
+   - Prevents unauthorized uploads
+   
+3. **File type validation:**
+   - Only images allowed
+   - MIME type verified server-side
+   
+4. **WordPress filesystem API:**
+   - Proper permissions handling
+   - Secure file operations
+
+**Backup Considerations:**
+
+When backing up your site, ensure:
+- `wp-content/uploads/` is included
+- Both files and database are backed up
+- Order meta data is preserved
+
+**Cleanup:**
+
+Receipts are **not automatically deleted** when:
+- Orders are deleted
+- Plugin is deactivated
+- Plugin is uninstalled
+
+Manual cleanup:
+```bash
+rm -rf wp-content/uploads/zigi-payment-qrcode/
+```
+
+<Note>
+Receipt files are not attached to WordPress Media Library. They exist as standalone files referenced by order meta data.
+</Note>
+
+  </Accordion>
+
+  <Accordion title="Is this plugin secure?">
+    
+**Yes**, the plugin follows WordPress security best practices.
+
+**Security Features:**
+
+**1. Nonce Verification**
+
+All AJAX requests require valid WordPress nonces (`functions.php:132-135`):
+```php
+wp_verify_nonce($nonce, 'zigi_payment_qr_nonce')
+```
+
+Prevents:
+- Cross-Site Request Forgery (CSRF)
+- Unauthorized file uploads
+- Replay attacks
+
+**2. File Type Validation**
+
+Multiple layers of validation:
+- Client-side: JavaScript MIME type check
+- Server-side: `wp_check_filetype_and_ext()`
+- Whitelist: Only `jpg`, `jpeg`, `png`, `gif` allowed
+
+Prevents:
+- Upload of executable files (.php, .exe)
+- MIME type spoofing
+- Malicious file uploads
+
+**3. Input Sanitization**
+
+All user inputs are sanitized (`functions.php:149-155`):
+```php
+sanitize_file_name()      // File names
+sanitize_mime_type()      // MIME types
+sanitize_text_field()     // Text inputs
+esc_url_raw()             // URLs
+absint()                  // Integers
+```
+
+**4. Output Escaping**
+
+All outputs are escaped:
+```php
+esc_url()         // URLs
+esc_attr()        // HTML attributes
+esc_html()        // HTML content
+wp_kses_post()    // Rich content
+```
+
+Prevents:
+- Cross-Site Scripting (XSS)
+- HTML injection
+- JavaScript injection
+
+**5. File Upload Security**
+
+- Uses `wp_handle_upload()` - WordPress standard function
+- Validates actual file content, not just extension
+- Checks `is_uploaded_file()` to prevent file inclusion attacks
+- Custom upload directory prevents overwriting system files
+
+**6. Database Security**
+
+- Uses WooCommerce order meta API (prepared statements)
+- No raw SQL queries
+- WordPress escaping and sanitization
+
+**7. Directory Protection**
+
+- `index.html` in upload directory prevents listing
+- No directory traversal vulnerabilities
+- Proper file permissions (755 for directories, 644 for files)
+
+**8. ABSPATH Check**
+
+All PHP files start with:
+```php
+if (!defined('ABSPATH')) {
+    exit;
+}
+```
+
+Prevents direct file access.
+
+**What the plugin does NOT do:**
+
+❌ No sensitive data in URLs or GET parameters
+❌ No eval() or similar dangerous functions
+❌ No external API calls that could leak data
+❌ No database credentials or API keys required
+❌ No user passwords or payment card data stored
+
+**Privacy Considerations:**
+
+- Receipt images may contain personal information
+- Stored on your server (not sent to external services)
+- Access controlled via WordPress permissions
+- Consider GDPR compliance when storing customer data
+
+**Recommended Additional Security:**
+
+1. **Use HTTPS** to encrypt data in transit
+2. **Limit file upload sizes** in PHP configuration
+3. **Regular WordPress updates** for security patches
+4. **Strong admin passwords** to protect order data
+5. **Regular backups** including receipts directory
+
+<Tip>
+You can further restrict receipt access by implementing custom WordPress capabilities or modifying the upload directory to be outside the web root.
+</Tip>
+
+  </Accordion>
+
+  <Accordion title="Can I customize the messages and text shown to customers?">
+    
+**Yes**, all customer-facing messages are fully customizable through the plugin settings.
+
+**Customizable Settings:**
+
+**1. Payment Method Title**
+
+- **Setting:** "Título"
+- **Default:** "Paga con ZIGI"
+- **Where shown:** Checkout payment method selection
+- **Example:** Change to "Pago con QR ZIGI" or "Transferencia ZIGI"
+
+**2. Payment Method Description**
+
+- **Setting:** "Descripción"
+- **Default:** "Método de pago vía QR ZIGI. Al realizar el pago, debes adjuntar el comprobante con la orden de compra."
+- **Where shown:** Below payment method at checkout
+- **Purpose:** Brief explanation before customer selects method
+
+**3. Popup Description**
+
+- **Setting:** "Descripción del Popup"
+- **Default:** "Debes escanear el código QR, hacer clic en continuar para adjuntar la captura (es el único comprobante de pago) y podrás completar la compra."
+- **Where shown:** Inside QR code popup modal
+- **Purpose:** Step-by-step instructions for customer
+
+**4. Amount Limit Message**
+
+- **Setting:** "Mensaje de Monto Límite"
+- **Default:** "Este método no permite pagos mayores a 500 por día."
+- **Where shown:** In popup when cart total exceeds limit
+- **Purpose:** Inform customers of transaction restrictions
+
+**5. Amount Limit Value**
+
+- **Setting:** "Monto Límite"
+- **Default:** Empty (no limit)
+- **Example:** Set to `500` to prevent payments over 500 GTQ/USD
+- **Behavior:** If cart total exceeds limit, "Continue" button is hidden
+
+**6. Affiliated Phone Number**
+
+- **Setting:** "Número de Teléfono Afiliado"
+- **Default:** Empty
+- **Where shown:** In popup above QR code as clickable link
+- **Purpose:** Allow customers to add contact before paying
+- **Format:** Displayed as: "Agregar Contacto: +502 1234 5678"
+
+**Where to Configure:**
+
+Navigate to:
+```
+WordPress Admin > WooCommerce > Settings > Payments > Paga con ZIGI > Manage
+```
+
+**Translation Support:**
+
+The plugin is translation-ready:
+- **Text Domain:** `paga-con-zigi`
+- **Translation Files:** Create `.po` / `.mo` files for your language
+- **Location:** `wp-content/languages/plugins/`
+- **Tools:** Use Loco Translate or Poedit
+
+All strings are wrapped with:
+```php
+__('Text to translate', 'paga-con-zigi')
+```
+
+**Static Text (not customizable via settings):**
+
+Some interface text is hardcoded but translatable:
+- "Continuar" (Continue button)
+- "Completar Compra" (Complete Purchase button)
+- "Arrastra y suelta el archivo" (Drag and drop file)
+- "Seleccionar Archivo" (Select File button)
+- Error messages
+
+These require translation files or code modifications.
+
+**HTML Support:**
+
+Description fields support basic HTML:
+- `<strong>` for bold
+- `<em>` for italic
+- `<br>` for line breaks
+- `<a>` for links
+
+Processed with `wp_kses_post()` for security.
+
+<Tip>
+Test your custom messages by:
+1. Add items to cart
+2. Proceed to checkout
+3. Select "Paga con ZIGI"
+4. Click "Place Order" to see popup
+5. Verify all messages display correctly
+</Tip>
+
+  </Accordion>
+
+  <Accordion title="Does this plugin integrate with ZIGI's API?">
+    
+**No**, this plugin does **not** integrate with ZIGI's API or any external service.
+
+**How it works instead:**
+
+The plugin provides a **manual payment method** similar to bank transfer:
+
+1. **You provide your QR code** - Upload your ZIGI QR code image to the plugin settings
+2. **Customer scans and pays** - Customer uses their ZIGI app to scan and pay
+3. **Customer uploads receipt** - Customer provides proof of payment via screenshot
+4. **You verify manually** - You check your ZIGI account and approve orders
+
+**Why no API integration?**
+
+**Advantages of manual method:**
+- ✅ No API credentials needed
+- ✅ Works with any ZIGI account
+- ✅ No monthly fees or API costs
+- ✅ Simple setup - just upload QR code
+- ✅ No dependencies on external services
+- ✅ Complete control over verification process
+- ✅ No API rate limits or downtime
+
+**Disadvantages:**
+- ❌ Manual order verification required
+- ❌ Orders not automatically completed
+- ❌ Relies on customer to upload receipt
+- ❌ No real-time payment confirmation
+- ❌ More admin work for high-volume stores
+
+**Is automatic verification possible?**
+
+As of version 2.0.0, automatic verification is not supported. This would require:
+- ZIGI to provide a merchant API
+- API credentials and authentication
+- Webhook integration for real-time updates
+- Additional development and maintenance
+
+**Best suited for:**
+
+This manual approach works best for:
+- Low to medium volume stores
+- Stores with staff to verify payments
+- Situations where payment security is critical
+- Merchants who want simple, no-cost integration
+
+**Not recommended for:**
+- High-volume stores with hundreds of daily orders
+- Fully automated operations
+- Stores requiring instant order fulfillment
+
+<Note>
+If ZIGI releases a merchant API in the future, automatic payment verification could be added in a future plugin version. For now, the manual approach ensures maximum compatibility and security.
+</Note>
+
+  </Accordion>
+
+  <Accordion title="What happens if a customer doesn't upload a receipt?">
+    
+**The order process will not complete.**
+
+The upload is **required** for checkout completion.
+
+**Technical Implementation:**
+
+The checkout flow requires receipt upload (`woopro-front.js:106-114`):
+
+```javascript
+if (!droppedFiles || droppedFiles.length != 1) {
+    alert("Debes seleccionar un archivo.");
+    return;
+}
+```
+
+Without a receipt:
+- Order is not submitted
+- Payment is not recorded
+- Customer remains on checkout page
+- Alert: "Debes seleccionar un archivo."
+
+**Customer Experience:**
+
+1. Customer clicks "Place Order"
+2. QR popup appears
+3. Customer scans QR and pays
+4. Clicks "Continuar" button
+5. Must upload receipt screenshot
+6. Clicks "Completar Compra"
+7. **If no file selected:** Alert appears, order not placed
+8. **If file uploaded:** Order placed successfully
+
+**Edge Cases:**
+
+**Scenario 1: Customer pays but doesn't upload**
+
+- Payment is made in ZIGI
+- Customer closes popup without uploading
+- Order is **not created**
+- Cart remains full
+- Solution: Customer must start checkout again
+
+**Scenario 2: Customer uploads wrong image**
+
+- Customer uploads random image
+- Order is created with wrong receipt
+- Status: "On Hold"
+- Admin sees wrong receipt
+- Solution: Admin can:
+  - Contact customer for correct receipt
+  - Cancel order if fraud suspected
+  - Manually verify payment in ZIGI account
+
+**Scenario 3: Upload fails due to technical error**
+
+- File is selected but upload fails
+- Error message: "Error de red" or "Falló la carga"
+- Order is **not created**
+- Solution:
+  - Check troubleshooting guide
+  - Verify file size and type
+  - Try different browser
+  - Contact site admin
+
+**Can receipts be uploaded later?**
+
+**No**, the plugin does not support post-order receipt upload. The receipt must be uploaded during checkout.
+
+Workarounds for late receipts:
+1. Customer emails receipt to support
+2. Admin manually adds image URL to order meta
+3. Or mark order as paid based on email proof
+
+**Fraud Prevention:**
+
+Required receipt upload helps prevent:
+- Orders without payment
+- Claiming payment methods without completing
+- Testing payment flows without intent to pay
+
+**Improving Customer Experience:**
+
+To reduce confusion:
+1. Customize popup description to emphasize screenshot requirement
+2. Add instructions to checkout page
+3. Provide example screenshots
+4. Train customer support to assist
+
+<Warning>
+If a customer pays via ZIGI but doesn't complete the checkout (no receipt upload), no order exists in your store. Always verify ZIGI payments against WooCommerce orders.
+</Warning>
+
+  </Accordion>
+
+  <Accordion title="Can I use this plugin with other payment gateways?">
+    
+**Yes**, Paga con ZIGI works alongside other WooCommerce payment gateways.
+
+**Multi-Gateway Setup:**
+
+Customers can choose from:
+- Paga con ZIGI (QR payments)
+- Credit/debit cards
+- PayPal
+- Bank transfer
+- Cash on delivery
+- Any other WooCommerce payment method
+
+**Configuration:**
+
+1. Install and activate multiple payment plugins
+2. Go to `WooCommerce > Settings > Payments`
+3. Enable all payment methods you want to offer
+4. Arrange display order via drag-and-drop
+5. Configure each gateway independently
+
+**No Conflicts:**
+
+The plugin:
+- ✅ Extends standard `WC_Payment_Gateway` class
+- ✅ Uses unique gateway ID: `zigi_payment`
+- ✅ Follows WooCommerce gateway conventions
+- ✅ Doesn't modify other payment methods
+- ✅ Self-contained JavaScript and CSS
+
+**Customer Experience:**
+
+At checkout, payment methods appear as radio buttons:
+
+```
+○ Credit Card / Debit Card
+○ PayPal
+● Paga con ZIGI  [Selected]
+○ Bank Transfer
+○ Cash on Delivery
+```
+
+Each method shows its own:
+- Description
+- Form fields
+- Instructions
+
+**When to Offer ZIGI:**
+
+Consider offering Paga con ZIGI:
+- **Alongside cards** - For customers who prefer mobile payments
+- **Instead of bank transfer** - Faster than traditional transfers
+- **For local customers** - ZIGI is Guatemala-specific
+- **For lower fees** - May have lower transaction costs
+
+**Payment Method Restrictions:**
+
+You can restrict ZIGI based on:
+
+**Order amount:**
+- Set "Monto Límite" to restrict high-value orders
+- Force expensive orders to use other methods
+
+**Customer location:**
+- Use plugins like "WooCommerce Payment Gateway Based Fees"
+- Only show ZIGI for Guatemala
+
+**Product type:**
+- Use conditional logic plugins
+- Disable ZIGI for specific products
+
+**Order total:**
+- Built-in amount limit feature
+- Automatically hides "Continue" button if exceeded
+
+**Gateway Priority:**
+
+Control which payment method appears first:
+
+1. Go to `WooCommerce > Settings > Payments`
+2. Drag gateways to reorder
+3. Top gateway is default selection
+4. Consider customer preferences
+
+**Testing Multiple Gateways:**
+
+When testing:
+1. Enable WooCommerce test mode on other gateways
+2. Use real ZIGI account (no test mode available)
+3. Test each payment method separately
+4. Verify order meta data is correct
+5. Check admin order page shows correct payment method
+
+**Compatibility Notes:**
+
+Known compatible with:
+- WooCommerce Stripe
+- WooCommerce PayPal
+- Square for WooCommerce
+- Any standard WooCommerce gateway
+
+Not tested with:
+- Custom checkout page builders
+- Heavily modified checkout flows
+- One-page checkout plugins (may require customization)
+
+<Tip>
+Offer 3-5 payment methods to give customers choice without overwhelming them. Consider your target market - for Guatemalan customers, ZIGI + cards covers most preferences.
+</Tip>
+
+  </Accordion>
+</AccordionGroup>
+
+## Additional Questions?
+
+If your question isn't answered here:
+
+1. Check the [Troubleshooting](/support/troubleshooting) guide for technical issues
+2. Review the [Configuration Guide](/configuration) for setup questions
+3. Contact support at [clientes@neopunto.com](mailto:clientes@neopunto.com)
+4. Visit [https://neopunto.com](https://neopunto.com) for more resources
+
+<Note>
+This plugin is developed and maintained by Neopunto. For feature requests or bug reports, please contact support with detailed information about your use case.
+</Note>

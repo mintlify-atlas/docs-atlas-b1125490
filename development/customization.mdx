@@ -1,0 +1,957 @@
+---
+title: 'Customization Guide'
+description: 'Learn how to customize and extend the Paga con ZIGI payment gateway plugin'
+---
+
+This guide shows you how to customize various aspects of the Paga con ZIGI plugin to fit your specific needs.
+
+## Extending the Gateway Class
+
+The main payment gateway class `Zigi_Payment_WC_Gateway` extends `WC_Payment_Gateway` and can be customized by creating a child class.
+
+### Creating a Custom Gateway Extension
+
+<CodeGroup>
+```php Child Class Example
+<?php
+/**
+ * Custom extension of ZIGI Payment Gateway
+ */
+class Custom_Zigi_Gateway extends Zigi_Payment_WC_Gateway
+{
+    public function __construct()
+    {
+        parent::__construct();
+        
+        // Override or add new properties
+        $this->method_title = __('ZIGI Pro Payment', 'your-textdomain');
+        $this->method_description = __('Enhanced ZIGI payment with custom features', 'your-textdomain');
+        
+        // Add custom hooks
+        add_action('woocommerce_thankyou_' . $this->id, array($this, 'custom_thankyou_page'));
+    }
+    
+    /**
+     * Add custom fields to gateway settings
+     */
+    public function init_form_fields()
+    {
+        parent::init_form_fields();
+        
+        // Add custom field
+        $this->form_fields['custom_message'] = array(
+            'title'       => __('Custom Success Message', 'your-textdomain'),
+            'type'        => 'textarea',
+            'description' => __('Message shown after successful payment', 'your-textdomain'),
+            'default'     => __('Thank you for your ZIGI payment!', 'your-textdomain'),
+            'desc_tip'    => true,
+        );
+    }
+    
+    /**
+     * Custom thank you page content
+     */
+    public function custom_thankyou_page($order_id)
+    {
+        $order = wc_get_order($order_id);
+        $receipt_url = $order->get_meta('zigi-payment-qrcode', true);
+        
+        if (!empty($receipt_url)) {
+            echo '<div class="zigi-receipt-confirmation">';
+            echo '<h3>' . esc_html($this->get_option('custom_message')) . '</h3>';
+            echo '<p>' . __('Your payment receipt has been received.', 'your-textdomain') . '</p>';
+            echo '</div>';
+        }
+    }
+}
+
+// Register the custom gateway
+add_filter('woocommerce_payment_gateways', 'add_custom_zigi_gateway');
+
+function add_custom_zigi_gateway($gateways)
+{
+    $gateways[] = 'Custom_Zigi_Gateway';
+    return $gateways;
+}
+```
+
+```php Override Payment Processing
+class Custom_Zigi_Gateway extends Zigi_Payment_WC_Gateway
+{
+    /**
+     * Override process_payment to add custom logic
+     */
+    public function process_payment($order_id)
+    {
+        $order = wc_get_order($order_id);
+        
+        // Add custom validation
+        if (isset($_POST['zigi-payment-qrcode']) && !empty($_POST['zigi-payment-qrcode'])) {
+            $receipt_url = esc_url_raw($_POST['zigi-payment-qrcode']);
+            
+            // Custom: Validate image dimensions
+            $image_data = @getimagesize($receipt_url);
+            if ($image_data && ($image_data[0] < 200 || $image_data[1] < 200)) {
+                wc_add_notice(__('Receipt image is too small. Please upload a larger image.', 'your-textdomain'), 'error');
+                return;
+            }
+            
+            $order->update_meta_data('zigi-payment-qrcode', $receipt_url);
+            $order->update_meta_data('zigi-payment-date', current_time('mysql'));
+            $order->save();
+            
+            // Send custom notification
+            do_action('custom_zigi_payment_received', $order_id, $receipt_url);
+        }
+        
+        // Call parent method
+        return parent::process_payment($order_id);
+    }
+}
+```
+</CodeGroup>
+
+<Tip>
+When extending the gateway class, always call the parent constructor to ensure all default functionality is preserved.
+</Tip>
+
+## Modifying Popup Appearance
+
+Customize the payment popup's look and behavior by modifying CSS and JavaScript.
+
+### Custom CSS Styling
+
+<CodeGroup>
+```php Enqueue Custom Styles
+add_action('wp_enqueue_scripts', 'custom_zigi_popup_styles', 20);
+
+function custom_zigi_popup_styles()
+{
+    wp_enqueue_style(
+        'custom-zigi-popup',
+        get_stylesheet_directory_uri() . '/assets/css/custom-zigi.css',
+        array('zigi_payment_qr'),
+        '1.0.0'
+    );
+}
+```
+
+```css Custom Popup Styles (custom-zigi.css)
+/* Change popup background color */
+.popup-wrapper {
+    background: rgba(0, 100, 200, 0.5);
+}
+
+/* Customize popup container */
+.popup-wrapper .popup-main-wrapper {
+    max-width: 500px;
+    border-radius: 12px;
+    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.3);
+}
+
+/* Style the QR code image */
+.popup-wrapper .first-step img.popup-qr {
+    border: 3px solid #90EE90;
+    border-radius: 8px;
+    padding: 10px;
+    background: white;
+}
+
+/* Custom button styling */
+.popup-wrapper .btn_submit {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.popup-wrapper .btn_submit:hover {
+    transform: scale(1.05);
+}
+
+/* Customize upload area */
+.box.has-advanced-upload {
+    outline-color: #667eea;
+    background: #f8f9ff;
+}
+
+/* Custom price display */
+.popup-wrapper .first-step .price {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2E8B57;
+    background: #f0fff0;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+    .popup-wrapper .popup-main-wrapper {
+        width: 95%;
+        padding: 20px;
+    }
+}
+```
+</CodeGroup>
+
+### Custom JavaScript Behavior
+
+<CodeGroup>
+```php Enqueue Custom JavaScript
+add_action('wp_enqueue_scripts', 'custom_zigi_popup_scripts', 20);
+
+function custom_zigi_popup_scripts()
+{
+    wp_enqueue_script(
+        'custom-zigi-popup',
+        get_stylesheet_directory_uri() . '/assets/js/custom-zigi.js',
+        array('jquery', 'zigi_payment_qr'),
+        '1.0.0',
+        true
+    );
+    
+    // Pass custom data to JavaScript
+    wp_localize_script('custom-zigi-popup', 'customZigiData', array(
+        'maxFileSize' => 5 * 1024 * 1024, // 5MB
+        'allowedTypes' => array('image/jpeg', 'image/png', 'image/gif'),
+        'confirmMessage' => __('Are you sure you want to proceed with this payment?', 'your-textdomain')
+    ));
+}
+```
+
+```javascript Custom Popup Behavior (custom-zigi.js)
+jQuery(function($) {
+    'use strict';
+    
+    // Add confirmation dialog before opening popup
+    $(document).on('submit', 'form.checkout', function(e) {
+        const paymentMethod = $('input[name="payment_method"]:checked').val();
+        
+        if (paymentMethod === 'zigi_payment') {
+            if (!$('form.checkout').hasClass('place-order-qr')) {
+                // Show custom confirmation
+                if (!confirm(customZigiData.confirmMessage)) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+        }
+    });
+    
+    // Validate file size before upload
+    $(document).on('change', '.box__file', function(e) {
+        const file = e.target.files[0];
+        
+        if (file) {
+            // Check file size
+            if (file.size > customZigiData.maxFileSize) {
+                alert('File is too large. Maximum size is 5MB.');
+                $(this).val('');
+                return false;
+            }
+            
+            // Check file type
+            if (customZigiData.allowedTypes.indexOf(file.type) === -1) {
+                alert('Invalid file type. Only JPG, PNG, and GIF are allowed.');
+                $(this).val('');
+                return false;
+            }
+        }
+    });
+    
+    // Add image preview before upload
+    $(document).on('change', '.box__file', function(e) {
+        const file = e.target.files[0];
+        
+        if (file && file.type.match('image.*')) {
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                // Remove existing preview
+                $('.receipt-preview').remove();
+                
+                // Add new preview
+                const preview = $('<div class="receipt-preview" style="margin: 15px 0; text-align: center;">');
+                preview.append('<p style="margin-bottom: 10px;">Preview:</p>');
+                preview.append('<img src="' + event.target.result + '" style="max-width: 200px; border: 2px solid #ddd; border-radius: 4px;">');
+                
+                $('.box__input').after(preview);
+            };
+            
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // Add progress indicator during upload
+    $(document).on('click', '.finalized_order', function() {
+        $('.popup-wrapper .loader').show();
+        
+        // Add custom progress message
+        if ($('.upload-progress').length === 0) {
+            const progressMsg = $('<div class="upload-progress" style="margin-top: 10px; color: #666;">');
+            progressMsg.text('Uploading your receipt...');
+            $('.popup-wrapper .loader').after(progressMsg);
+        }
+    });
+    
+    // Custom close popup animation
+    $('.popupCloseButton').on('click', function() {
+        $('.popup-wrapper .popup-main-wrapper').addClass('fadeOut');
+        setTimeout(function() {
+            $('.popup-wrapper').hide();
+            $('.popup-wrapper .popup-main-wrapper').removeClass('fadeOut');
+        }, 300);
+    });
+});
+```
+</CodeGroup>
+
+<Note>
+When customizing JavaScript, ensure your scripts load after the plugin's scripts by using a higher priority (20+) in `wp_enqueue_scripts`.
+</Note>
+
+## Custom Receipt Validation
+
+Implement custom validation logic for uploaded payment receipts.
+
+<CodeGroup>
+```php Server-Side Validation
+/**
+ * Add custom validation to receipt upload
+ */
+add_action('wp_ajax_zigi_payment_qr_code', 'custom_zigi_receipt_validation', 5);
+add_action('wp_ajax_nopriv_zigi_payment_qr_code', 'custom_zigi_receipt_validation', 5);
+
+function custom_zigi_receipt_validation()
+{
+    if (!isset($_FILES['files'])) {
+        return;
+    }
+    
+    $file = $_FILES['files'];
+    
+    // Custom validation: Check file size (max 3MB)
+    $max_size = 3 * 1024 * 1024;
+    if ($file['size'] > $max_size) {
+        wp_send_json_error('El archivo es demasiado grande. Máximo 3MB.', 400);
+        wp_die();
+    }
+    
+    // Custom validation: Check image dimensions
+    $image_info = getimagesize($file['tmp_name']);
+    if ($image_info) {
+        $width = $image_info[0];
+        $height = $image_info[1];
+        
+        // Require minimum dimensions
+        if ($width < 300 || $height < 300) {
+            wp_send_json_error('La imagen es muy pequeña. Mínimo 300x300 píxeles.', 400);
+            wp_die();
+        }
+        
+        // Require maximum dimensions
+        if ($width > 4000 || $height > 4000) {
+            wp_send_json_error('La imagen es muy grande. Máximo 4000x4000 píxeles.', 400);
+            wp_die();
+        }
+    }
+    
+    // All validation passed, continue with upload
+}
+```
+
+```php Image Quality Validation
+/**
+ * Validate image quality and content
+ */
+function validate_zigi_receipt_quality($file_path)
+{
+    // Check if image is too dark or too bright
+    $image = imagecreatefromstring(file_get_contents($file_path));
+    if (!$image) {
+        return false;
+    }
+    
+    $width = imagesx($image);
+    $height = imagesy($image);
+    
+    $brightness_total = 0;
+    $pixel_count = 0;
+    
+    // Sample every 10th pixel for performance
+    for ($x = 0; $x < $width; $x += 10) {
+        for ($y = 0; $y < $height; $y += 10) {
+            $rgb = imagecolorat($image, $x, $y);
+            $r = ($rgb >> 16) & 0xFF;
+            $g = ($rgb >> 8) & 0xFF;
+            $b = $rgb & 0xFF;
+            
+            $brightness = ($r + $g + $b) / 3;
+            $brightness_total += $brightness;
+            $pixel_count++;
+        }
+    }
+    
+    imagedestroy($image);
+    
+    $avg_brightness = $brightness_total / $pixel_count;
+    
+    // Reject if too dark (< 20) or too bright (> 235)
+    if ($avg_brightness < 20 || $avg_brightness > 235) {
+        return array(
+            'valid' => false,
+            'message' => 'La imagen es muy oscura o muy clara. Por favor sube una imagen más clara.'
+        );
+    }
+    
+    return array('valid' => true);
+}
+
+// Hook into upload process
+add_filter('wp_handle_upload_prefilter', 'zigi_validate_upload_quality');
+
+function zigi_validate_upload_quality($file)
+{
+    // Only validate ZIGI receipt uploads
+    if (!isset($_POST['action']) || $_POST['action'] !== 'zigi_payment_qr_code') {
+        return $file;
+    }
+    
+    $validation = validate_zigi_receipt_quality($file['tmp_name']);
+    
+    if (!$validation['valid']) {
+        $file['error'] = $validation['message'];
+    }
+    
+    return $file;
+}
+```
+</CodeGroup>
+
+## Changing Upload Directory Structure
+
+Customize where and how payment receipts are stored.
+
+<CodeGroup>
+```php Organize by Order ID
+/**
+ * Custom upload directory structure
+ * Organizes receipts by order ID
+ */
+function custom_zigi_upload_directory($dirs)
+{
+    // Get current order ID from session or POST
+    $order_id = WC()->session->get('order_awaiting_payment');
+    
+    if (!$order_id && isset($_POST['order_id'])) {
+        $order_id = absint($_POST['order_id']);
+    }
+    
+    // Create path: /zigi-payments/orders/ORDER_ID/
+    $custom_subdir = '/zigi-payments/orders/' . ($order_id ? $order_id : 'pending');
+    
+    $new_path = $dirs['basedir'] . $custom_subdir;
+    $new_url  = $dirs['baseurl'] . $custom_subdir;
+    
+    // Create directory
+    wp_mkdir_p($new_path);
+    
+    // Add index.html for security
+    $index_file = $new_path . '/index.html';
+    if (!file_exists($index_file)) {
+        file_put_contents($index_file, '<!-- Silence is golden -->');
+    }
+    
+    return array_merge($dirs, array(
+        'path'   => $new_path,
+        'url'    => $new_url,
+        'subdir' => $custom_subdir,
+    ));
+}
+
+// Replace the default upload_dir filter
+remove_filter('upload_dir', 'zigi_payment_qr_code_upload_dir');
+add_filter('upload_dir', 'custom_zigi_upload_directory');
+```
+
+```php Organize by Date and Customer
+/**
+ * Organize uploads by year/month/customer
+ */
+function zigi_upload_by_customer($dirs)
+{
+    $user_id = get_current_user_id();
+    
+    // For guest customers, use session ID
+    if (!$user_id) {
+        $user_id = 'guest-' . substr(WC()->session->get_customer_id(), 0, 8);
+    }
+    
+    // Structure: /zigi-payments/2024/03/customer-123/
+    $custom_subdir = sprintf(
+        '/zigi-payments/%s/%s/customer-%s',
+        date('Y'),
+        date('m'),
+        $user_id
+    );
+    
+    $new_path = $dirs['basedir'] . $custom_subdir;
+    $new_url  = $dirs['baseurl'] . $custom_subdir;
+    
+    wp_mkdir_p($new_path);
+    
+    return array_merge($dirs, array(
+        'path'   => $new_path,
+        'url'    => $new_url,
+        'subdir' => $custom_subdir,
+    ));
+}
+```
+
+```php Private Upload Directory
+/**
+ * Store receipts in a private directory outside wp-content
+ * Requires custom download handler
+ */
+function zigi_private_upload_directory($dirs)
+{
+    // Use a directory outside the web root
+    $private_path = WP_CONTENT_DIR . '/../zigi-private-receipts';
+    
+    // Create directory if it doesn't exist
+    if (!file_exists($private_path)) {
+        wp_mkdir_p($private_path);
+        
+        // Add .htaccess to deny direct access
+        file_put_contents(
+            $private_path . '/.htaccess',
+            "Deny from all"
+        );
+    }
+    
+    $custom_subdir = '/receipts/' . date('Y/m');
+    $new_path = $private_path . $custom_subdir;
+    
+    wp_mkdir_p($new_path);
+    
+    return array_merge($dirs, array(
+        'path'   => $new_path,
+        'url'    => home_url('/zigi-receipt/'), // Virtual URL
+        'subdir' => $custom_subdir,
+    ));
+}
+
+// Add custom download handler
+add_action('init', 'zigi_receipt_download_handler');
+
+function zigi_receipt_download_handler()
+{
+    if (!isset($_GET['zigi-receipt'])) {
+        return;
+    }
+    
+    $receipt_id = sanitize_text_field($_GET['zigi-receipt']);
+    
+    // Verify user has permission to view this receipt
+    $order_id = get_post_meta($receipt_id, 'order_id', true);
+    $order = wc_get_order($order_id);
+    
+    if (!$order || !current_user_can('view_order', $order_id)) {
+        wp_die('Unauthorized');
+    }
+    
+    $file_path = get_post_meta($receipt_id, 'file_path', true);
+    
+    if (file_exists($file_path)) {
+        header('Content-Type: ' . mime_content_type($file_path));
+        header('Content-Length: ' . filesize($file_path));
+        readfile($file_path);
+        exit;
+    }
+}
+```
+</CodeGroup>
+
+<Warning>
+When changing the upload directory structure, ensure proper security measures are in place to prevent unauthorized access to payment receipts.
+</Warning>
+
+## Adding Custom Order Statuses
+
+Create custom order statuses for better payment tracking.
+
+<CodeGroup>
+```php Register Custom Order Statuses
+/**
+ * Register custom order statuses for ZIGI payments
+ */
+add_action('init', 'register_zigi_order_statuses');
+
+function register_zigi_order_statuses()
+{
+    register_post_status('wc-zigi-pending', array(
+        'label'                     => __('ZIGI Pending Verification', 'your-textdomain'),
+        'public'                    => true,
+        'exclude_from_search'       => false,
+        'show_in_admin_all_list'    => true,
+        'show_in_admin_status_list' => true,
+        'label_count'               => _n_noop(
+            'ZIGI Pending <span class="count">(%s)</span>',
+            'ZIGI Pending <span class="count">(%s)</span>',
+            'your-textdomain'
+        ),
+    ));
+    
+    register_post_status('wc-zigi-verified', array(
+        'label'                     => __('ZIGI Payment Verified', 'your-textdomain'),
+        'public'                    => true,
+        'exclude_from_search'       => false,
+        'show_in_admin_all_list'    => true,
+        'show_in_admin_status_list' => true,
+        'label_count'               => _n_noop(
+            'ZIGI Verified <span class="count">(%s)</span>',
+            'ZIGI Verified <span class="count">(%s)</span>',
+            'your-textdomain'
+        ),
+    ));
+}
+
+/**
+ * Add custom statuses to WooCommerce order statuses
+ */
+add_filter('wc_order_statuses', 'add_zigi_order_statuses');
+
+function add_zigi_order_statuses($order_statuses)
+{
+    $new_statuses = array();
+    
+    // Add custom statuses after 'on-hold'
+    foreach ($order_statuses as $key => $status) {
+        $new_statuses[$key] = $status;
+        
+        if ('wc-on-hold' === $key) {
+            $new_statuses['wc-zigi-pending'] = __('ZIGI Pending Verification', 'your-textdomain');
+            $new_statuses['wc-zigi-verified'] = __('ZIGI Payment Verified', 'your-textdomain');
+        }
+    }
+    
+    return $new_statuses;
+}
+```
+
+```php Use Custom Status in Payment Process
+/**
+ * Modify payment processing to use custom status
+ */
+class Custom_Zigi_Gateway extends Zigi_Payment_WC_Gateway
+{
+    public function process_payment($order_id)
+    {
+        $order = wc_get_order($order_id);
+        
+        if (isset($_POST['zigi-payment-qrcode']) && !empty($_POST['zigi-payment-qrcode'])) {
+            $order->update_meta_data('zigi-payment-qrcode', esc_url_raw($_POST['zigi-payment-qrcode']));
+            $order->save();
+        }
+        
+        // Use custom status instead of 'on-hold'
+        $order->update_status(
+            'zigi-pending',
+            __('Awaiting ZIGI payment verification', 'your-textdomain')
+        );
+        
+        // Trigger custom action for verification workflow
+        do_action('zigi_payment_pending_verification', $order_id);
+        
+        $order->reduce_order_stock();
+        WC()->cart->empty_cart();
+        
+        return array(
+            'result'   => 'success',
+            'redirect' => $this->get_return_url($order)
+        );
+    }
+}
+
+/**
+ * Auto-verify payment and update status
+ */
+add_action('zigi_payment_pending_verification', 'auto_verify_zigi_payment');
+
+function auto_verify_zigi_payment($order_id)
+{
+    $order = wc_get_order($order_id);
+    $receipt_url = $order->get_meta('zigi-payment-qrcode', true);
+    
+    if (!empty($receipt_url)) {
+        // Simulate verification (in production, this could call an API)
+        $verified = true; // Replace with actual verification logic
+        
+        if ($verified) {
+            $order->update_status(
+                'zigi-verified',
+                __('ZIGI payment verified successfully', 'your-textdomain')
+            );
+            
+            // Then mark as processing
+            $order->update_status('processing');
+        }
+    }
+}
+```
+
+```php Admin Status Management
+/**
+ * Add bulk actions for ZIGI order statuses
+ */
+add_filter('bulk_actions-edit-shop_order', 'zigi_bulk_actions');
+
+function zigi_bulk_actions($actions)
+{
+    $actions['mark_zigi_verified'] = __('Mark as ZIGI Verified', 'your-textdomain');
+    return $actions;
+}
+
+add_filter('handle_bulk_actions-edit-shop_order', 'handle_zigi_bulk_actions', 10, 3);
+
+function handle_zigi_bulk_actions($redirect_to, $action, $post_ids)
+{
+    if ($action !== 'mark_zigi_verified') {
+        return $redirect_to;
+    }
+    
+    $changed = 0;
+    
+    foreach ($post_ids as $post_id) {
+        $order = wc_get_order($post_id);
+        
+        if ($order && $order->get_payment_method() === 'zigi_payment') {
+            $order->update_status('zigi-verified');
+            $changed++;
+        }
+    }
+    
+    $redirect_to = add_query_arg(
+        'zigi_verified',
+        $changed,
+        $redirect_to
+    );
+    
+    return $redirect_to;
+}
+```
+</CodeGroup>
+
+## Email Customization
+
+Customize email notifications for ZIGI payments.
+
+<CodeGroup>
+```php Add Receipt to Order Emails
+/**
+ * Add payment receipt to order emails
+ */
+add_action('woocommerce_email_order_meta', 'add_zigi_receipt_to_email', 10, 3);
+
+function add_zigi_receipt_to_email($order, $sent_to_admin, $plain_text)
+{
+    if ($order->get_payment_method() !== 'zigi_payment') {
+        return;
+    }
+    
+    $receipt_url = $order->get_meta('zigi-payment-qrcode', true);
+    
+    if (!empty($receipt_url)) {
+        if ($plain_text) {
+            echo "\n" . __('ZIGI Payment Receipt:', 'your-textdomain') . "\n";
+            echo esc_url($receipt_url) . "\n";
+        } else {
+            echo '<h2>' . __('ZIGI Payment Receipt', 'your-textdomain') . '</h2>';
+            echo '<p><a href="' . esc_url($receipt_url) . '">';
+            echo '<img src="' . esc_url($receipt_url) . '" alt="Payment Receipt" style="max-width: 300px; border: 2px solid #ddd;" />';
+            echo '</a></p>';
+        }
+    }
+}
+```
+
+```php Custom Email for ZIGI Payments
+/**
+ * Send custom email when ZIGI receipt is uploaded
+ */
+add_action('woocommerce_order_status_on-hold', 'send_zigi_receipt_confirmation', 10, 1);
+
+function send_zigi_receipt_confirmation($order_id)
+{
+    $order = wc_get_order($order_id);
+    
+    if ($order->get_payment_method() !== 'zigi_payment') {
+        return;
+    }
+    
+    $receipt_url = $order->get_meta('zigi-payment-qrcode', true);
+    
+    if (!empty($receipt_url)) {
+        $to = $order->get_billing_email();
+        $subject = sprintf(__('Payment receipt received for order #%s', 'your-textdomain'), $order->get_order_number());
+        
+        $message = sprintf(
+            __('Thank you! We have received your ZIGI payment receipt for order #%s.', 'your-textdomain'),
+            $order->get_order_number()
+        );
+        $message .= "\n\n";
+        $message .= __('We will verify your payment and process your order shortly.', 'your-textdomain');
+        
+        wp_mail($to, $subject, $message);
+    }
+}
+```
+</CodeGroup>
+
+## Advanced Customizations
+
+### Add QR Code Watermark
+
+<CodeGroup>
+```php Watermark Uploaded Receipts
+/**
+ * Add watermark to uploaded receipts
+ */
+add_filter('wp_handle_upload', 'zigi_add_receipt_watermark');
+
+function zigi_add_receipt_watermark($upload)
+{
+    // Only process ZIGI uploads
+    if (!isset($_POST['action']) || $_POST['action'] !== 'zigi_payment_qr_code') {
+        return $upload;
+    }
+    
+    $image_path = $upload['file'];
+    $image_type = wp_check_filetype($image_path)['type'];
+    
+    // Create image resource
+    switch ($image_type) {
+        case 'image/jpeg':
+            $image = imagecreatefromjpeg($image_path);
+            break;
+        case 'image/png':
+            $image = imagecreatefrompng($image_path);
+            break;
+        case 'image/gif':
+            $image = imagecreatefromgif($image_path);
+            break;
+        default:
+            return $upload;
+    }
+    
+    if (!$image) {
+        return $upload;
+    }
+    
+    // Add watermark text
+    $watermark_text = 'ZIGI Payment - ' . date('Y-m-d H:i');
+    $font_size = 12;
+    $text_color = imagecolorallocatealpha($image, 255, 255, 255, 50);
+    
+    // Position watermark at bottom right
+    $image_width = imagesx($image);
+    $image_height = imagesy($image);
+    
+    imagestring(
+        $image,
+        $font_size,
+        $image_width - 200,
+        $image_height - 20,
+        $watermark_text,
+        $text_color
+    );
+    
+    // Save watermarked image
+    switch ($image_type) {
+        case 'image/jpeg':
+            imagejpeg($image, $image_path, 90);
+            break;
+        case 'image/png':
+            imagepng($image, $image_path, 9);
+            break;
+        case 'image/gif':
+            imagegif($image, $image_path);
+            break;
+    }
+    
+    imagedestroy($image);
+    
+    return $upload;
+}
+```
+</CodeGroup>
+
+### Integration with External APIs
+
+<CodeGroup>
+```php Webhook Notification
+/**
+ * Send webhook notification when payment is received
+ */
+add_action('woocommerce_order_status_on-hold', 'zigi_send_webhook_notification');
+
+function zigi_send_webhook_notification($order_id)
+{
+    $order = wc_get_order($order_id);
+    
+    if ($order->get_payment_method() !== 'zigi_payment') {
+        return;
+    }
+    
+    $receipt_url = $order->get_meta('zigi-payment-qrcode', true);
+    
+    if (empty($receipt_url)) {
+        return;
+    }
+    
+    $webhook_url = get_option('zigi_webhook_url');
+    
+    if (empty($webhook_url)) {
+        return;
+    }
+    
+    $payload = array(
+        'order_id'     => $order->get_id(),
+        'order_number' => $order->get_order_number(),
+        'total'        => $order->get_total(),
+        'currency'     => $order->get_currency(),
+        'receipt_url'  => $receipt_url,
+        'customer'     => array(
+            'email'      => $order->get_billing_email(),
+            'first_name' => $order->get_billing_first_name(),
+            'last_name'  => $order->get_billing_last_name(),
+        ),
+        'timestamp'    => current_time('mysql'),
+    );
+    
+    wp_remote_post($webhook_url, array(
+        'body'    => json_encode($payload),
+        'headers' => array(
+            'Content-Type' => 'application/json',
+        ),
+    ));
+}
+```
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Hooks & Filters" icon="link" href="/development/hooks-filters">
+    View all available hooks and filters
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/configuration/settings">
+    Configure plugin settings and options
+  </Card>
+</CardGroup>

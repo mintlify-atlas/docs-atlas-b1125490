@@ -1,0 +1,157 @@
+---
+title: Introduction
+description: Learn about Paga con ZIGI, a WooCommerce payment gateway that enables QR code payments via ZIGI in Guatemala
+---
+
+## What is Paga con ZIGI?
+
+Paga con ZIGI is a payment method plugin for WooCommerce that allows customers to make payments using QR codes through the ZIGI mobile app in Guatemala. The plugin operates similarly to bank transfer payments: customers scan the QR code, complete the payment through the ZIGI app, and upload their payment receipt directly to their order.
+
+<Info>
+  ZIGI is backed by Banco Industrial, one of Guatemala's leading financial institutions, providing secure and reliable payment processing.
+</Info>
+
+This solution is ideal for merchants who want to accept digital payments without high transaction fees or complex integrations.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Bank Transfer-Style Payment" icon="money-bill-transfer">
+    Simple workflow similar to traditional bank transfers, familiar to customers
+  </Card>
+  <Card title="QR Code Scanning" icon="qrcode">
+    Customers scan your QR code directly from the ZIGI mobile app
+  </Card>
+  <Card title="Receipt Upload" icon="file-arrow-up">
+    Payment receipts are attached directly to orders for verification
+  </Card>
+  <Card title="Customizable Messages" icon="message">
+    Fully customizable payment instructions and descriptions from the admin panel
+  </Card>
+  <Card title="Amount Limits" icon="gauge-high">
+    Configure minimum and maximum payment amounts with custom messaging
+  </Card>
+  <Card title="Receipt Visibility" icon="eye">
+    Payment receipts are visible to both customers and store administrators
+  </Card>
+</CardGroup>
+
+### Additional Features
+
+- **Affiliated Phone Number**: Option to display your ZIGI-affiliated phone number for customer support
+- **QR Code Management**: Upload and preview your ZIGI QR code from the WordPress admin
+- **Custom Payment Icon**: Configure a custom icon for the payment method at checkout
+- **HPOS Compatible**: Full support for WooCommerce High-Performance Order Storage
+- **Simple User Flow**: Clear and straightforward payment process for end users
+
+## Requirements
+
+Before installing Paga con ZIGI, ensure your environment meets these requirements:
+
+<Steps>
+  <Step title="WordPress Version">
+    WordPress 5.2 or higher (tested up to 6.6)
+  </Step>
+  <Step title="WooCommerce Plugin">
+    WooCommerce must be installed and activated (tested up to 9.3)
+  </Step>
+  <Step title="PHP Version">
+    PHP 7.4 or higher
+  </Step>
+  <Step title="ZIGI Account">
+    Active ZIGI account with a generated QR code (available in Guatemala)
+  </Step>
+</Steps>
+
+<Warning>
+  This plugin requires WooCommerce to function. Make sure WooCommerce is installed and activated before installing Paga con ZIGI.
+</Warning>
+
+## How It Works
+
+The payment flow is designed to be simple and secure:
+
+<Steps>
+  <Step title="Customer Selects Payment Method">
+    At checkout, the customer selects "Paga con ZIGI" as their payment method
+  </Step>
+  <Step title="QR Code Display">
+    A popup modal displays your ZIGI QR code and the total amount to pay
+  </Step>
+  <Step title="Payment via ZIGI App">
+    Customer scans the QR code using their ZIGI mobile app and completes the payment
+  </Step>
+  <Step title="Receipt Upload">
+    Customer uploads a screenshot or image of the payment receipt
+  </Step>
+  <Step title="Order Processing">
+    Order is placed with "on-hold" status, awaiting merchant verification
+  </Step>
+  <Step title="Merchant Verification">
+    Store administrator reviews the receipt in the order details and confirms payment
+  </Step>
+</Steps>
+
+<Note>
+  Orders are automatically set to "on-hold" status until the merchant manually verifies the payment receipt and updates the order status.
+</Note>
+
+## Payment Gateway Architecture
+
+Paga con ZIGI extends the `WC_Payment_Gateway` class and integrates seamlessly with WooCommerce:
+
+```php
+class Zigi_Payment_WC_Gateway extends WC_Payment_Gateway
+{
+    public function __construct()
+    {
+        $this->id = 'zigi_payment';
+        $this->method_title = __('Paga con ZIGI', 'paga-con-zigi');
+        $this->method_description = __('Método de pago QR ZIGI.', 'paga-con-zigi');
+        
+        $this->supports = array('products');
+        // ... additional configuration
+    }
+}
+```
+
+The plugin handles:
+- Payment gateway registration via `woocommerce_payment_gateways` filter
+- HPOS (High-Performance Order Storage) compatibility
+- Custom form fields for QR code upload and configuration
+- AJAX-based receipt upload functionality
+- Order metadata storage for payment receipts
+
+## Use Cases
+
+Paga con ZIGI is perfect for:
+
+- **Guatemalan E-commerce Stores**: Accept local payments without international gateway fees
+- **Small to Medium Businesses**: Low barrier to entry with no complex API integrations
+- **Manual Order Verification**: Businesses that prefer to verify payments before fulfillment
+- **Mobile-First Customers**: Target customers who prefer mobile payment solutions
+
+## Security & Verification
+
+The plugin implements several security measures:
+
+- **Nonce Verification**: All AJAX requests include WordPress nonce validation
+- **File Type Validation**: Receipt uploads are restricted to image formats (JPG, PNG, GIF)
+- **Sanitized Inputs**: All user inputs are properly sanitized and escaped
+- **Secure File Handling**: Uses WordPress core file upload functions with security checks
+- **Custom Upload Directory**: Payment receipts stored in dedicated `/zigi-payment-qrcode` folder
+
+<Tip>
+  Payment receipts are stored separately in `/wp-content/uploads/zigi-payment-qrcode/` for easy management and backup.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Learn how to install and activate the plugin
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get started with your first ZIGI payment
+  </Card>
+</CardGroup>

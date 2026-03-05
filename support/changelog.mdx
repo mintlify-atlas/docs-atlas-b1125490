@@ -1,0 +1,356 @@
+---
+title: Changelog
+description: Version history and release notes for Paga con ZIGI
+---
+
+## Version History
+
+This page documents all changes, features, and improvements to the Paga con ZIGI WordPress plugin.
+
+---
+
+## Version 2.0.0
+
+<Note>
+**Release Date:** 2024 (Current Version)  
+**Status:** Stable  
+**License:** GPL v2 or later
+</Note>
+
+### Overview
+
+Initial public release of Paga con ZIGI, a WooCommerce payment gateway for accepting QR code payments via the ZIGI app in Guatemala.
+
+### Core Features
+
+**Payment Gateway Integration**
+- Full WooCommerce payment gateway implementation
+- Extends `WC_Payment_Gateway` class
+- Seamless integration with WooCommerce checkout flow
+- Manual payment verification system (similar to bank transfer)
+- Orders placed with "On Hold" status for admin review
+
+**QR Code Payment System**
+- Upload custom ZIGI QR code through admin settings
+- QR code displayed in modal popup at checkout
+- Live preview of QR code in admin configuration
+- Media library integration for QR code selection
+- Responsive QR code display for all device sizes
+
+**Receipt Upload Functionality**
+- Customers upload payment receipt during checkout
+- Drag-and-drop file upload interface
+- Traditional file selection fallback
+- HTML5 advanced upload features with browser detection
+- Supported formats: JPG, JPEG, PNG, GIF
+- Real-time upload progress indication
+- Client-side and server-side file validation
+
+**Admin Features**
+- Custom meta box on order edit page
+- Receipt image display with lightbox view
+- Direct link to full-size receipt
+- Receipt accessible from order details
+- Compatible with WooCommerce order admin interface
+
+**Customization Options**
+- Configurable payment method title and description
+- Custom popup description text
+- Payment amount limit with custom warning message
+- Optional affiliated phone number display
+- Fully translatable interface (Text Domain: `paga-con-zigi`)
+
+**Security Features**
+- WordPress nonce verification for all AJAX requests
+- File type validation (client-side and server-side)
+- Input sanitization using WordPress standards
+- Output escaping to prevent XSS
+- `ABSPATH` check on all PHP files
+- Secure file upload handling via `wp_handle_upload()`
+- Custom upload directory with index protection
+
+**Technical Specifications**
+- **Minimum WordPress:** 5.2
+- **Tested up to WordPress:** 6.6
+- **Minimum WooCommerce:** Not specified (requires WooCommerce active)
+- **Tested up to WooCommerce:** 9.3
+- **Minimum PHP:** 7.4
+- **Text Domain:** `paga-con-zigi`
+- **License:** GPL v2 or later
+
+### HPOS Compatibility
+
+**High-Performance Order Storage Support**
+- Declares compatibility with `custom_order_tables`
+- Meta box registration for both traditional and HPOS orders
+- Uses WooCommerce order meta API for cross-compatible data storage
+- Tested with WooCommerce 7.0+ HPOS feature
+- Seamless migration support from traditional to HPOS storage
+
+### File Management
+
+**Receipt Storage**
+- Custom upload directory: `wp-content/uploads/zigi-payment-qrcode/`
+- Automatic directory creation with proper permissions
+- Unique filename generation with timestamp
+- Directory listing protection via `index.html`
+- Uses WordPress Filesystem API
+- Compatible with various hosting environments
+
+**File Security**
+- MIME type verification
+- File extension whitelist
+- Upload size respects PHP configuration
+- Nonce-protected upload endpoint
+- Sanitized filenames prevent path traversal
+
+### User Interface
+
+**Frontend Components**
+- Modal popup for QR code display
+- Two-step checkout process:
+  1. QR code scan and payment
+  2. Receipt upload and order completion
+- Amount display in popup
+- Optional contact number with tel: link
+- Amount limit warning when threshold exceeded
+- Responsive design for mobile and desktop
+- Loading indicators during upload
+- Error messages with user-friendly text
+
+**Admin Interface**
+- Settings page under WooCommerce > Settings > Payments
+- QR code upload with preview
+- Text area fields for descriptions
+- Enable/disable toggle
+- Drag-and-drop settings organization
+- Inline field descriptions with tooltips
+
+### JavaScript Features
+
+**Frontend Script** (`woopro-front.js`)
+- Drag-and-drop upload detection
+- File type validation before upload
+- AJAX file upload with progress
+- Form submission prevention until upload complete
+- jQuery-based DOM manipulation
+- Event delegation for dynamic content
+- Fallback upload for older browsers
+- Payment method detection in checkout
+
+**Admin Script** (`woopro.js`)
+- Media library integration
+- QR code preview update
+- Remove uploaded QR functionality
+- Settings form enhancements
+
+### Localization
+
+**Translation Ready**
+- All strings wrapped with translation functions
+- Spanish (Guatemala) as default language
+- Translation functions used:
+  - `__()` - Get translated string
+  - `esc_html_e()` - Echo and escape translated string
+  - `esc_html__()` - Get and escape translated string
+  - `esc_attr_e()` - Echo and escape for attribute
+- JavaScript translations via `wp_localize_script()`
+- `.pot` file generation ready
+
+### Integration & Compatibility
+
+**WordPress Ecosystem**
+- Standard plugin architecture
+- Follows WordPress Coding Standards
+- Uses WordPress Core APIs exclusively
+- No external dependencies
+- No API calls to external services
+
+**WooCommerce Integration**
+- Declares WooCommerce as required plugin
+- Uses WooCommerce order meta methods
+- Compatible with WooCommerce cart and checkout
+- Respects WooCommerce order statuses
+- Integrates with WooCommerce email notifications
+
+**Theme Compatibility**
+- Works with any WooCommerce-compatible theme
+- Self-contained CSS styling
+- No theme file modifications required
+- Responsive design adapts to theme layout
+
+### Files Structure
+
+```
+paga-con-zigi/
+├── paga-con-zigi.php       # Main plugin file, gateway class
+├── functions.php           # Helper functions, hooks, AJAX handlers
+├── assets/
+│   ├── woopro.js          # Admin JavaScript
+│   ├── woopro.css         # Admin styles
+│   ├── woopro-front.js    # Frontend JavaScript
+│   ├── woopro-front.css   # Frontend styles
+│   └── loader.gif         # Upload loading indicator
+└── README.md              # Documentation
+```
+
+### Database Schema
+
+**Order Meta**
+- **Meta Key:** `zigi-payment-qrcode`
+- **Meta Value:** URL to uploaded receipt image
+- **Storage:** WooCommerce order meta (HPOS compatible)
+
+**Plugin Settings**
+- **Option Name:** `woocommerce_zigi_payment_settings`
+- **Storage:** WordPress options table
+- **Structure:** Serialized array with keys:
+  - `enabled` - Enable/disable gateway
+  - `title` - Payment method title
+  - `description` - Checkout description
+  - `front_description` - Popup description
+  - `limit_amount` - Maximum payment amount
+  - `message_limit_amount` - Limit warning message
+  - `number_telephone` - Affiliated phone number
+  - `preview_qr` - QR code image URL
+
+### Known Limitations
+
+- Manual payment verification required (no API integration)
+- Receipt upload mandatory during checkout (cannot be added later)
+- No automated payment confirmation
+- Guatemala-specific (ZIGI only available in Guatemala)
+- No refund support (manual refunds only)
+- Single QR code per store (cannot vary by order)
+- No multi-currency support
+- Requires customer to have ZIGI app installed
+
+### Development Notes
+
+**Hooks Used**
+- `woocommerce_payment_gateways` - Register gateway
+- `before_woocommerce_init` - Declare HPOS compatibility
+- `plugins_loaded` - Initialize gateway class
+- `woocommerce_update_options_payment_gateways_{id}` - Save settings
+- `admin_enqueue_scripts` - Load admin assets
+- `wp_enqueue_scripts` - Load frontend assets
+- `wp_footer` - Render popup HTML
+- `add_meta_boxes` - Register receipt meta box
+- `wp_ajax_zigi_payment_qr_code` - Handle uploads (logged in)
+- `wp_ajax_nopriv_zigi_payment_qr_code` - Handle uploads (guest)
+
+**Filters Used**
+- `upload_dir` - Customize receipt upload directory
+
+### Author Information
+
+- **Developer:** Andrés Turcios
+- **Company:** Neopunto
+- **Website:** [https://neopunto.com](https://neopunto.com)
+- **Support:** [clientes@neopunto.com](mailto:clientes@neopunto.com)
+- **Plugin URI:** [https://neopunto.com](https://neopunto.com)
+
+---
+
+## Future Roadmap
+
+<Note>
+The following features are under consideration for future releases. Implementation depends on community feedback and technical feasibility.
+</Note>
+
+### Potential Enhancements
+
+**API Integration** (if ZIGI provides merchant API)
+- Automatic payment verification
+- Real-time transaction status updates
+- Webhook support for payment notifications
+- Automatic order completion
+- Refund support
+
+**Enhanced Features**
+- Multiple QR codes per product or order amount
+- Post-order receipt upload
+- Customer account receipt history
+- Admin dashboard statistics
+- Payment reports and analytics
+- Email receipt to admin on upload
+- SMS notifications for payment received
+
+**Improved UX**
+- Receipt preview before upload
+- Image compression before upload
+- Multi-file upload (multiple receipt images)
+- Video instructions in popup
+- Progressive Web App for QR scan
+- Copy QR code to clipboard
+
+**Advanced Configuration**
+- Per-product QR codes
+- Different QR for different order amounts
+- Scheduled QR code rotation
+- Multiple affiliated accounts
+- Custom CSS styling options
+- Conditional gateway availability
+
+**Developer Features**
+- REST API endpoints
+- Webhook system
+- Action/filter hooks for customization
+- Developer documentation
+- Code snippets library
+
+---
+
+## Upgrade Notes
+
+<Warning>
+This is the initial release (2.0.0). When future versions are released, upgrade instructions will be provided here.
+</Warning>
+
+### Updating the Plugin
+
+When updates become available:
+
+1. **Backup first**
+   - Backup WordPress database
+   - Backup plugin files
+   - Backup receipt directory: `wp-content/uploads/zigi-payment-qrcode/`
+
+2. **Update plugin**
+   - Via WordPress admin dashboard (when available in repository)
+   - Or manually replace plugin files
+
+3. **Clear caches**
+   - Browser cache
+   - WordPress cache plugins
+   - Server-side caching
+
+4. **Test functionality**
+   - Verify settings preserved
+   - Test checkout process
+   - Check receipt upload
+   - Review existing orders
+
+---
+
+## Version Numbering
+
+This plugin follows [Semantic Versioning](https://semver.org/):
+
+- **Major version** (2.x.x) - Breaking changes, major features
+- **Minor version** (x.0.x) - New features, backward compatible
+- **Patch version** (x.x.0) - Bug fixes, security updates
+
+---
+
+## Support & Feedback
+
+For questions about this release or to report issues:
+
+- **Email:** [clientes@neopunto.com](mailto:clientes@neopunto.com)
+- **Website:** [https://neopunto.com](https://neopunto.com)
+- **Guide:** [Cómo cobrar con ZIGI mediante código QR en WordPress](https://neopunto.com/guia-de-como-cobrar-con-zigi-mediante-codigo-qr-en-wordpress-gratis/)
+
+<Tip>
+When reporting issues, include your WordPress version, WooCommerce version, PHP version, and a detailed description of the problem. Screenshots are helpful!
+</Tip>

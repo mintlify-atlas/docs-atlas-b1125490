@@ -1,0 +1,570 @@
+---
+title: Payment Verification Guide
+description: Best practices, procedures, and tips for verifying ZIGI payment receipts and handling discrepancies
+---
+
+This guide provides comprehensive instructions for verifying ZIGI payment receipts, identifying valid payments, and handling common verification scenarios.
+
+## Why Payment Verification Matters
+
+Unlike automated payment gateways, ZIGI payments require manual verification because:
+
+- Payments are processed through the ZIGI mobile app, not directly through your website
+- Customers upload screenshot receipts as proof of payment
+- The plugin doesn't have API access to automatically verify transactions
+- You must confirm payments in your ZIGI account before fulfilling orders
+
+<Warning>
+Never mark an order as complete based solely on an uploaded receipt. Always verify the actual payment was received in your ZIGI merchant account.
+</Warning>
+
+## Verification Checklist
+
+For each ZIGI payment order, verify the following:
+
+<Steps>
+
+### Check Order Details
+
+1. **Order Status**: Should be "On Hold" for unverified payments
+2. **Payment Method**: Confirm it's "Paga con ZIGI"
+3. **Order Date/Time**: Note when order was placed
+4. **Order Total**: Note the exact amount customer should have paid
+
+### Examine the Receipt Image
+
+Click the receipt in the "Comprobante de Pago QR" meta box to open full size:
+
+**What to verify:**
+- Receipt is a clear, readable image (not blurry or cropped)
+- Receipt shows a ZIGI transaction confirmation
+- Transaction type is a payment/transfer (not a refund or reversal)
+- Receipt includes transaction details (amount, date, time)
+
+**Red flags:**
+- Receipt is obviously edited or photoshopped
+- Receipt is from wrong payment app (not ZIGI)
+- Receipt shows wrong transaction type (withdrawal, refund, etc.)
+- Receipt is duplicate from previous order
+- Receipt has suspicious modifications or overlays
+
+<Info>
+The receipt image is stored in `/wp-content/uploads/zigi-payment-qrcode/` with a timestamped filename for uniqueness (functions.php:180-182).
+</Info>
+
+### Verify Payment Amount
+
+Compare the amount shown in the receipt with the order total:
+
+```
+Order Total: Q 350.00
+Receipt Amount: Q 350.00
+✓ Match confirmed
+```
+
+**Common scenarios:**
+
+<AccordionGroup>
+
+<Accordion title="Amount matches exactly">
+**Action**: Proceed with verification
+
+This is the ideal scenario. The payment amount matches the order total precisely.
+</Accordion>
+
+<Accordion title="Amount is slightly different (rounding)">
+**Action**: Investigate
+
+Small differences (Q 0.01 - Q 0.05) might be due to:
+- Rounding differences in currency conversion
+- Fees displayed differently
+- System calculation discrepancies
+
+**Solution**: Check if difference is acceptable per your store policy. If within tolerance, accept. If not, contact customer.
+</Accordion>
+
+<Accordion title="Amount is significantly less">
+**Action**: Do not complete order
+
+If receipt shows less than order total:
+- Contact customer to request additional payment
+- Keep order on hold until full amount received
+- Document the discrepancy in order notes
+</Accordion>
+
+<Accordion title="Amount is more than order total">
+**Action**: Contact customer
+
+If receipt shows overpayment:
+- Verify the extra amount in your ZIGI account
+- Contact customer to arrange refund of difference
+- Document the situation in order notes
+</Accordion>
+
+</AccordionGroup>
+
+### Verify Payment Date and Time
+
+Check that payment timing makes sense:
+
+**Expected timeline:**
+- Order placed at: [order date/time]
+- Payment should be within: ~5-30 minutes after order
+- Receipt uploaded at: [typically same as order placement]
+
+**Suspicious patterns:**
+- Receipt dated before order was placed (impossible)
+- Receipt dated weeks/months after order (possible fraud)
+- Receipt time doesn't align with order time (same day is usually fine)
+
+<Tip>
+Customers typically complete ZIGI payments within minutes of placing the order. Receipts older than 1 hour warrant closer examination.
+</Tip>
+
+### Verify Recipient Account
+
+Confirm the payment was made to YOUR ZIGI account:
+
+1. Check recipient name/phone number in receipt
+2. Compare to your ZIGI merchant account details
+3. Verify payment appears in YOUR transaction history
+
+**Red flags:**
+- Receipt shows payment to different merchant
+- Recipient phone number doesn't match yours
+- Receipt shows payment to personal account (not merchant account)
+
+### Check Your ZIGI Account
+
+This is the most critical step:
+
+1. **Log into ZIGI app** or web dashboard (if available)
+2. **Review recent transactions** around the order date/time
+3. **Find the matching transaction** by amount and timestamp
+4. **Verify transaction is completed** (not pending or failed)
+5. **Confirm funds were received** in your account balance
+
+<Warning>
+This step is non-negotiable. Even if the receipt looks perfect, you must confirm the actual payment in your ZIGI account before fulfilling the order.
+</Warning>
+
+</Steps>
+
+## Common Verification Scenarios
+
+### Scenario 1: Perfect Match
+
+**Situation:**
+- Receipt is clear and readable
+- Amount matches order total exactly
+- Payment dated same day as order
+- Transaction found in your ZIGI account
+- Payment is completed/settled
+
+**Action:**
+1. Add order note: "Pago verificado en ZIGI. Monto: Q [amount]. Fecha: [date]."
+2. Update order status to "Processing"
+3. Fulfill order normally
+
+### Scenario 2: Receipt Unclear
+
+**Situation:**
+- Receipt image is blurry, cropped, or partially obscured
+- Can't read transaction details clearly
+- Unsure if payment is legitimate
+
+**Action:**
+1. Add order note: "Comprobante ilegible. Contactando cliente."
+2. Email customer: "Hola, el comprobante de pago que subiste no es legible. ¿Podrías enviarnos una imagen más clara?"
+3. Keep order "On Hold" until clear receipt provided
+4. If customer doesn't respond within [your policy timeframe], consider canceling
+
+**Email template:**
+```
+Asunto: Comprobante de pago - Orden #[ORDER_ID]
+
+Hola [CUSTOMER_NAME],
+
+Gracias por tu orden #[ORDER_ID].
+
+El comprobante de pago que subiste durante el proceso de compra no es
+legible. Para procesar tu orden, necesitamos una imagen clara del
+comprobante de tu pago ZIGI.
+
+Por favor responde a este correo con una foto o captura de pantalla
+clara que muestre:
+- Monto pagado: Q [AMOUNT]
+- Fecha y hora de la transacción
+- Confirmación de pago completo
+
+Gracias por tu comprensión.
+
+Saludos,
+[YOUR STORE]
+```
+
+### Scenario 3: Payment Not Found in ZIGI
+
+**Situation:**
+- Receipt looks legitimate
+- Receipt details seem correct
+- BUT payment doesn't appear in your ZIGI account
+
+**Action:**
+1. Double-check transaction history (different date ranges, filters)
+2. Verify you're checking the correct ZIGI account
+3. Consider payment may be pending (wait 24 hours)
+4. Contact customer if still not found:
+
+```
+Asunto: Verificación de pago - Orden #[ORDER_ID]
+
+Hola [CUSTOMER_NAME],
+
+Estamos revisando tu orden #[ORDER_ID].
+
+No hemos podido localizar tu pago de Q [AMOUNT] en nuestra cuenta ZIGI.
+¿Podrías verificar que:
+
+1. El pago fue completado exitosamente en tu app ZIGI
+2. El pago fue enviado al número: [YOUR_ZIGI_NUMBER]
+3. El pago no fue cancelado o revertido
+
+Por favor envíanos una captura actualizada del estado de la transacción
+en tu app ZIGI.
+
+Gracias,
+[YOUR_STORE]
+```
+
+### Scenario 4: Amount Discrepancy
+
+**Situation:**
+- Receipt shows different amount than order total
+- Payment found in ZIGI but amount doesn't match
+
+**Action:**
+
+**If underpaid:**
+```
+Asunto: Monto incorrecto - Orden #[ORDER_ID]
+
+Hola [CUSTOMER_NAME],
+
+Hemos recibido tu pago de Q [RECEIVED_AMOUNT] para la orden #[ORDER_ID].
+
+El total de tu orden es Q [ORDER_TOTAL], por lo que falta un pago
+adicional de Q [DIFFERENCE].
+
+Para procesar tu orden, por favor realiza el pago del monto faltante
+y envíanos el comprobante.
+
+Gracias,
+[YOUR_STORE]
+```
+
+**If overpaid:**
+```
+Asunto: Reembolso de excedente - Orden #[ORDER_ID]
+
+Hola [CUSTOMER_NAME],
+
+Hemos recibido tu pago de Q [RECEIVED_AMOUNT] para la orden #[ORDER_ID].
+
+El total de tu orden es Q [ORDER_TOTAL], por lo que pagaste Q [EXCESS]
+de más.
+
+Estamos procesando tu orden y te reembolsaremos el excedente. Por favor
+confírmanos tu número ZIGI para el reembolso.
+
+Gracias,
+[YOUR_STORE]
+```
+
+### Scenario 5: Duplicate Receipt
+
+**Situation:**
+- Receipt image matches receipt from different order
+- Customer trying to reuse old receipt
+
+**Action:**
+1. Add order note: "Comprobante duplicado detectado. Orden anterior: #[OLD_ORDER_ID]"
+2. Cancel order
+3. Contact customer about fraudulent activity:
+
+```
+Asunto: Orden cancelada - #[ORDER_ID]
+
+Hola [CUSTOMER_NAME],
+
+Hemos detectado que el comprobante de pago para tu orden #[ORDER_ID]
+es el mismo que fue usado para la orden #[OLD_ORDER_ID].
+
+Cada comprobante solo puede ser usado una vez. Tu orden ha sido cancelada.
+
+Si esto fue un error, por favor contáctanos para resolverlo.
+
+[YOUR_STORE]
+```
+
+### Scenario 6: Old Receipt
+
+**Situation:**
+- Receipt is dated days/weeks before order was placed
+- Possible fraud attempt
+
+**Action:**
+1. Do not accept the payment
+2. Request fresh payment receipt
+3. Explain that receipt must match order date
+
+### Scenario 7: Suspicious or Edited Receipt
+
+**Situation:**
+- Receipt shows signs of editing (misaligned text, color differences)
+- Receipt looks photoshopped or manipulated
+- Receipt quality inconsistent (parts clear, parts blurry)
+
+**Action:**
+1. Add order note: "Comprobante sospechoso. Posible fraude."
+2. Do not fulfill order
+3. Request verification:
+
+```
+Asunto: Verificación adicional requerida - Orden #[ORDER_ID]
+
+Hola [CUSTOMER_NAME],
+
+Para procesar tu orden #[ORDER_ID], necesitamos verificación adicional
+de tu pago.
+
+Por favor envíanos:
+1. Una captura de pantalla completa de la transacción en tu app ZIGI
+2. El número de confirmación de la transacción
+3. Tu número de teléfono ZIGI
+
+Gracias por tu comprensión.
+
+[YOUR_STORE]
+```
+
+4. If customer doesn't provide satisfactory verification, cancel order
+
+## Technical Verification Tips
+
+### Inspect Receipt File Metadata
+
+For suspicious receipts, check file metadata:
+
+```bash
+# SSH into your server
+cd /wp-content/uploads/zigi-payment-qrcode/
+
+# Check file creation time
+ls -la [filename]
+
+# View image metadata (requires exiftool)
+exiftool [filename]
+```
+
+**What to look for:**
+- File creation date matches order date
+- Image not extensively edited (check Software/Editor fields)
+- Image originated from mobile device (check Camera Model)
+
+### Cross-Reference Multiple Orders
+
+If you suspect receipt reuse:
+
+1. Note the receipt filename from one order
+2. Search other orders for similar filenames or patterns
+3. Compare image file sizes and dimensions
+4. Use image comparison tools if needed
+
+<Tip>
+Consider keeping a log of verified payment amounts, dates, and order IDs to help identify duplicate receipt attempts.
+</Tip>
+
+## Verification Workflow Integration
+
+### Daily Verification Routine
+
+Establish a consistent verification schedule:
+
+**Morning routine:**
+1. Log into WordPress admin
+2. Go to WooCommerce → Orders
+3. Filter by status "On Hold"
+4. Open each ZIGI payment order
+5. Review receipts and verify payments
+6. Update statuses for verified orders
+7. Contact customers for any issues
+
+**Recommended schedule:**
+- **Small stores**: Verify once daily (morning)
+- **Medium stores**: Verify 2-3 times daily
+- **Large stores**: Verify every 2-3 hours during business hours
+
+### Using Order Notes Effectively
+
+Document your verification process:
+
+**Good order notes:**
+```
+✓ Pago verificado en ZIGI: Q 450.00
+✓ Transacción ID: [if visible in receipt]
+✓ Fecha verificación: 2024-03-15 10:30 AM
+```
+
+```
+⚠ Comprobante ilegible - email enviado al cliente
+⚠ Esperando respuesta
+```
+
+```
+✗ Pago no encontrado en cuenta ZIGI
+✗ Contactando cliente para verificación
+```
+
+**Poor order notes:**
+```
+❌ "verificado" (too vague)
+❌ "ok" (no details)
+❌ No note at all
+```
+
+## Fraud Prevention
+
+### Common Fraud Patterns
+
+1. **Receipt reuse**: Same receipt used for multiple orders
+2. **Edited receipts**: Amounts or dates changed in image editor
+3. **Wrong account**: Payment to different merchant, screenshot reused
+4. **Old receipts**: Past receipts used for new orders
+5. **No payment**: Fake/generated receipts that never happened
+
+### Prevention Strategies
+
+<Steps>
+
+1. **Always verify in ZIGI**: Never skip checking your actual account
+2. **Check receipt dates**: Must align with order date
+3. **Examine image quality**: Look for signs of editing
+4. **Monitor patterns**: Track customers with multiple problematic orders
+5. **Set clear policies**: Communicate verification requirements
+6. **Respond quickly**: Fast verification discourages fraud
+
+</Steps>
+
+### When to Escalate
+
+Contact authorities or payment processor if:
+- Pattern of fraud from same customer
+- Professional-looking fake receipts
+- Large amounts involved
+- Customer becomes threatening when questioned
+
+## Refunds and Cancellations
+
+### Issuing Refunds
+
+If you need to refund a verified ZIGI payment:
+
+1. **Process refund through ZIGI**: Transfer back to customer's ZIGI account
+2. **Get customer's ZIGI number**: Via email or phone
+3. **Complete transfer**: In your ZIGI app/account
+4. **Take screenshot**: Of refund confirmation
+5. **Update WooCommerce order**: 
+   - Add order note with refund details
+   - Change status to "Refunded"
+   - Attach refund screenshot to order notes
+
+<Note>
+The plugin doesn't handle automated refunds. All refunds must be processed manually through your ZIGI account.
+</Note>
+
+### Canceling Unverified Orders
+
+If payment cannot be verified:
+
+1. Attempt customer contact (2-3 times over 3-5 days)
+2. If no response, add final order note
+3. Cancel order in WooCommerce
+4. Restore inventory if needed
+5. Send cancellation email to customer
+
+**Cancellation note template:**
+```
+Orden cancelada - no se pudo verificar pago.
+Intentos de contacto: 3 (email: 2024-03-10, 2024-03-12, 2024-03-14)
+Sin respuesta del cliente.
+Inventario restaurado.
+```
+
+## Performance Metrics
+
+Track these metrics to optimize your verification process:
+
+- **Average verification time**: How long from order to verification
+- **Verification success rate**: % of receipts that verify successfully
+- **Issue rate**: % of orders requiring customer follow-up
+- **Fraud rate**: % of suspected fraudulent orders
+- **Customer response rate**: % of customers who respond to verification requests
+
+**Target benchmarks:**
+- Verification within 24 hours: 100%
+- Verification within 4 hours: 80%+
+- Successful verification: 95%+
+- Fraud rate: Less than 1%
+
+## Tools and Resources
+
+### Recommended Tools
+
+- **ZIGI mobile app**: Primary tool for verification
+- **Image comparison tools**: For detecting duplicate receipts
+- **Spreadsheet tracking**: Log of verified payments
+- **Email templates**: Quick customer communication
+- **Order note templates**: Consistent documentation
+
+### Store Policy Recommendations
+
+Consider implementing:
+
+1. **Verification timeframe**: "Orders verified within 24 hours"
+2. **Receipt requirements**: "Clear, unedited screenshots from ZIGI app"
+3. **Response deadline**: "Customers must respond to verification requests within 48 hours"
+4. **Dispute policy**: "Payment discrepancies must be resolved before fulfillment"
+
+## Best Practices Summary
+
+<CardGroup cols={2}>
+
+<Card title="Always Verify" icon="check-double">
+Never rely solely on uploaded receipt. Always check your ZIGI account for actual payment.
+</Card>
+
+<Card title="Document Everything" icon="file-pen">
+Use order notes to track verification status, issues, and customer communications.
+</Card>
+
+<Card title="Respond Quickly" icon="clock">
+Fast verification improves customer satisfaction and discourages fraud.
+</Card>
+
+<Card title="Watch for Patterns" icon="magnifying-glass">
+Monitor for suspicious patterns like duplicate receipts or serial fraud attempts.
+</Card>
+
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Admin Workflow" icon="user-tie" href="/guide/admin-workflow">
+    Learn how to manage ZIGI payments in WordPress admin
+  </Card>
+  <Card title="Customer Flow" icon="user" href="/guide/customer-flow">
+    Understand the customer payment experience
+  </Card>
+</CardGroup>

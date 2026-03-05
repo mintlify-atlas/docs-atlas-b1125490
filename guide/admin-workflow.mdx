@@ -1,0 +1,332 @@
+---
+title: Admin Workflow
+description: Managing ZIGI payments from the WordPress admin dashboard, viewing receipts, and verifying orders
+---
+
+This guide explains how store administrators view, access, and manage orders paid with the ZIGI payment method.
+
+## Overview
+
+As an administrator, you'll work with ZIGI payments primarily through the WooCommerce Orders interface. The plugin adds a custom meta box to each order that displays the uploaded payment receipt.
+
+## Accessing ZIGI Order Information
+
+<Steps>
+
+### Navigate to Orders
+
+1. Log into your WordPress admin dashboard
+2. Navigate to **WooCommerce → Orders**
+3. Look for orders with payment method "Paga con ZIGI"
+4. Orders will typically have status **"On Hold"** waiting for payment verification
+
+<Note>
+The plugin is compatible with WooCommerce High-Performance Order Storage (HPOS). Orders work the same way whether you're using traditional post-based storage or HPOS.
+</Note>
+
+### Open an Order
+
+Click on any order to view its details. The order edit screen displays:
+- Standard order information (customer, items, totals)
+- Order status (usually "On Hold" for new ZIGI payments)
+- Payment method: "Paga con ZIGI"
+- Custom meta box: **"Comprobante de Pago QR"** (QR Payment Receipt)
+
+### View Payment Receipt
+
+The payment receipt meta box is added by the `zigi_payment_meta_box()` function (functions.php:204-214).
+
+**Meta Box Location:**
+- Appears in the "normal" position on the order edit screen
+- Title: "Comprobante de Pago QR"
+- Contains the uploaded receipt image
+
+**Receipt Display:**
+- Image is displayed at 200x200 pixels
+- Clicking the image opens full-size version in new tab
+- Image is retrieved from order meta key: `zigi-payment-qrcode`
+
+<Info>
+The meta box callback function is `zigi_payment_meta_box_callback()` in functions.php:217-236. It's compatible with both traditional WooCommerce and HPOS orders.
+</Info>
+
+</Steps>
+
+## Order Meta Data
+
+The plugin stores payment receipt information as order meta data:
+
+```php
+// Meta key: zigi-payment-qrcode
+// Meta value: Full URL to uploaded receipt image
+// Storage location: /wp-content/uploads/zigi-payment-qrcode/
+```
+
+**Accessing Meta Data Programmatically:**
+
+```php
+$order = wc_get_order($order_id);
+$receipt_url = $order->get_meta('zigi-payment-qrcode', true);
+
+if (!empty($receipt_url)) {
+    // Receipt URL exists
+    echo '<img src="' . esc_url($receipt_url) . '" alt="Payment Receipt" />';
+}
+```
+
+## Verifying Payments
+
+<Steps>
+
+### Review the Receipt
+
+1. **Open the receipt image** in a new tab by clicking it
+2. **Verify payment details** match the order:
+   - Payment amount matches order total
+   - Payment date/time is recent
+   - Payment was made to your ZIGI account
+   - Transaction appears complete/confirmed
+
+<Warning>
+Do not rely solely on the presence of a receipt. Always verify the details match the order and that payment was actually received.
+</Warning>
+
+### Check ZIGI Account
+
+1. Log into your ZIGI merchant account or banking app
+2. Verify the payment appears in your transaction history
+3. Confirm the amount matches the order total
+4. Check that the transaction is completed (not pending)
+
+### Update Order Status
+
+After verifying payment:
+
+1. In the order edit screen, find the **Order Status** dropdown
+2. Change status from "On Hold" to **"Processing"** or **"Completed"**
+3. Optionally add an **Order Note** documenting verification
+4. Click **"Update"** to save changes
+
+**Recommended Order Note:**
+```
+Pago verificado en cuenta ZIGI.
+Monto: [amount]
+Fecha: [date]
+```
+
+</Steps>
+
+## Handling Missing or Invalid Receipts
+
+### No Receipt Uploaded
+
+If an order has payment method "Paga con ZIGI" but no receipt meta box appears:
+
+<Accordion title="Possible causes and solutions">
+
+**Customer skipped upload:**
+- The popup was closed before completing the upload step
+- Contact customer to request payment proof
+- Consider canceling the order if no proof provided
+
+**Technical issue during checkout:**
+- Check if file upload failed (check server error logs)
+- Review file upload permissions on `/wp-content/uploads/zigi-payment-qrcode/`
+- Verify AJAX endpoint is working: admin-ajax.php
+
+**Order created manually:**
+- If you created the order manually in admin, no receipt exists
+- Request proof of payment separately from customer
+
+</Accordion>
+
+### Invalid or Unreadable Receipt
+
+If the uploaded receipt image is unclear or doesn't match:
+
+1. **Add order note** explaining the issue
+2. **Contact customer** via email or phone
+3. **Request clear receipt** or additional proof
+4. Keep order **"On Hold"** until resolved
+5. Consider canceling if customer doesn't respond
+
+## Order Status Workflow
+
+<Steps>
+
+### Initial Status: On Hold
+
+When order is placed with ZIGI payment:
+- Status automatically set to **"On Hold"** (paga-con-zigi.php:255)
+- Status message: "Esperando pago offline" (Awaiting offline payment)
+- Stock levels are already reduced
+- Customer receives "On Hold" email notification
+
+### After Verification: Processing
+
+Once payment is verified in your ZIGI account:
+- Change status to **"Processing"**
+- Triggers "Processing Order" email to customer
+- Indicates you've confirmed payment and are fulfilling order
+
+### Final Status: Completed
+
+After order is shipped/delivered:
+- Change status to **"Completed"**
+- Triggers "Completed Order" email to customer
+- Marks order as fully fulfilled
+
+</Steps>
+
+## Admin Interface Details
+
+### Meta Box Rendering
+
+The meta box is added via WordPress's `add_meta_boxes` hook:
+
+```php
+// functions.php:204-214
+function zigi_payment_meta_box() {
+    if (defined('WC_VERSION') && version_compare(WC_VERSION, '7.0.0', '>=')) {
+        // HPOS-compatible (WooCommerce 7.0+)
+        add_meta_box(
+            'zigi-payment-meta-box',
+            __('Comprobante de Pago QR', 'paga-con-zigi'),
+            'zigi_payment_meta_box_callback',
+            'woocommerce_page_wc-orders',
+            'normal'
+        );
+    } else {
+        // Traditional post-based orders (WooCommerce < 7.0)
+        add_meta_box(
+            'zigi-payment-meta-box',
+            __('Comprobante de Pago QR', 'paga-con-zigi'),
+            'zigi_payment_meta_box_callback',
+            'shop_order',
+            'normal'
+        );
+    }
+}
+```
+
+### Meta Box Content
+
+The callback function displays the receipt image:
+
+```php
+// functions.php:217-236
+function zigi_payment_meta_box_callback($post) {
+    $object = $post;
+    
+    // Handle both post object and WC_Order object (HPOS compatibility)
+    if (!is_object($post) || !is_a($post, 'WC_Order')) {
+        $object = wc_get_order($post->ID);
+    }
+    
+    if ($object) {
+        $zigi_payment_qrcode = $object->get_meta('zigi-payment-qrcode', true);
+        
+        if (!empty($zigi_payment_qrcode) && esc_url($zigi_payment_qrcode)) {
+            echo '<a href="' . esc_url($zigi_payment_qrcode) . '" target="_blank">';
+            echo '<img src="' . esc_url($zigi_payment_qrcode) . '" alt="Imagen de Pago" width="200" height="200" loading="lazy" />';
+            echo '</a>';
+        }
+    }
+}
+```
+
+## Bulk Order Management
+
+### Filtering ZIGI Orders
+
+To view only ZIGI payment orders:
+
+1. Go to **WooCommerce → Orders**
+2. Use the search/filter feature
+3. Look for orders with status "On Hold"
+4. Check payment method column for "Paga con ZIGI"
+
+<Tip>
+Consider creating a custom order status like "Pending ZIGI Verification" for easier filtering. This requires additional code customization.
+</Tip>
+
+### Processing Multiple Orders
+
+When verifying multiple ZIGI payments:
+
+1. **Review all receipts first** before updating statuses
+2. **Verify all payments in ZIGI account** in batch
+3. **Update order statuses** one by one after confirmation
+4. **Add consistent order notes** for record keeping
+
+## Troubleshooting Admin Issues
+
+<AccordionGroup>
+
+<Accordion title="Meta box doesn't appear">
+
+**Possible causes:**
+- Order wasn't paid with ZIGI method (check payment method)
+- Meta box is collapsed (check "Screen Options" at top of page)
+- Plugin conflict or error (check browser console and PHP error logs)
+- HPOS compatibility issue (ensure WooCommerce and plugin are updated)
+
+**Solutions:**
+- Verify payment method is "zigi_payment"
+- Expand all meta boxes in Screen Options
+- Check for JavaScript errors in browser console
+- Update plugin and WooCommerce to latest versions
+
+</Accordion>
+
+<Accordion title="Receipt image doesn't load">
+
+**Possible causes:**
+- File was deleted from server
+- Incorrect file permissions
+- URL stored in meta is invalid
+- Server security blocking image access
+
+**Solutions:**
+- Check if file exists at: `/wp-content/uploads/zigi-payment-qrcode/`
+- Verify directory permissions (755) and file permissions (644)
+- Inspect meta value: `$order->get_meta('zigi-payment-qrcode', true)`
+- Check .htaccess or security plugins blocking access
+
+</Accordion>
+
+<Accordion title="Can't access order edit screen">
+
+**Possible causes:**
+- Insufficient user permissions
+- HPOS compatibility issue
+- Plugin conflict
+
+**Solutions:**
+- Ensure your user role has "edit_shop_orders" capability
+- Check WooCommerce → Settings → Advanced → Features (HPOS settings)
+- Temporarily disable other plugins to identify conflicts
+
+</Accordion>
+
+</AccordionGroup>
+
+## Best Practices for Admins
+
+1. **Verify daily**: Check ZIGI orders daily to ensure quick fulfillment
+2. **Document verification**: Always add order notes when verifying payments
+3. **Monitor receipts**: Watch for patterns of invalid or suspicious receipts
+4. **Communication**: Contact customers promptly if issues arise with receipts
+5. **Backup receipts**: Consider backing up the `/zigi-payment-qrcode/` directory
+6. **Regular audits**: Periodically audit ZIGI orders against ZIGI account statements
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Payment Verification" icon="shield-check" href="/guide/payment-verification">
+    Learn best practices for verifying ZIGI payment receipts
+  </Card>
+  <Card title="Customer Flow" icon="user" href="/guide/customer-flow">
+    Understand the customer experience with ZIGI payments
+  </Card>
+</CardGroup>

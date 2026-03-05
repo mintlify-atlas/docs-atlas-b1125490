@@ -1,0 +1,180 @@
+---
+title: Customer Payment Flow
+description: Complete guide to the customer experience when paying with ZIGI, from checkout to order completion
+---
+
+This guide walks through the complete customer journey when using the ZIGI payment method on your WooCommerce store.
+
+## Overview
+
+The ZIGI payment flow involves three main phases:
+1. **Payment method selection** at checkout
+2. **QR code scanning and payment** with the ZIGI app
+3. **Receipt upload and order completion**
+
+<Steps>
+
+### Checkout and Payment Selection
+
+When customers are ready to complete their purchase, they proceed to the WooCommerce checkout page.
+
+1. Customer adds products to cart and clicks "Proceed to Checkout"
+2. Customer fills in billing information
+3. Customer selects "Paga con ZIGI" as the payment method
+4. Customer clicks "Place Order" button
+
+<Note>
+The payment method displays a custom description (configurable in settings) that explains the QR payment process to customers.
+</Note>
+
+### QR Code Popup Display
+
+When the customer clicks "Place Order" with ZIGI selected, a modal popup appears instead of immediately processing the order.
+
+**Popup First Step - QR Display:**
+- Displays the merchant's ZIGI QR code (`preview_qr` setting)
+- Shows the order total amount to pay
+- Displays the merchant's affiliated phone number (if configured)
+- Shows custom instructions (`front_description` setting)
+- Includes a "Continuar" (Continue) button
+
+**Amount Limit Validation:**
+If a payment limit is configured (`limit_amount` setting):
+- The system checks if the order total exceeds the limit
+- If over the limit: displays warning message and removes Continue button
+- If within limit: allows customer to proceed
+
+<Info>
+The popup is rendered by the `zigi_payment_popup()` function in functions.php:20-72 and injected into the footer of every page.
+</Info>
+
+### Scanning the QR Code
+
+Customers must use the ZIGI mobile app to complete the payment:
+
+<Steps>
+
+1. **Open ZIGI app** on their mobile device
+2. **Scan the QR code** displayed in the popup
+3. **Confirm payment** in the ZIGI app for the exact amount shown
+4. **Complete the transfer** within the ZIGI application
+5. **Take a screenshot** of the payment confirmation (comprobante)
+
+</Steps>
+
+<Warning>
+The screenshot/photo of the payment receipt is the ONLY proof of payment. Customers must save this before proceeding.
+</Warning>
+
+### Uploading Payment Receipt
+
+After scanning the QR and completing payment in ZIGI:
+
+1. Customer clicks the **"Continuar"** button in the popup
+2. Popup transitions to the second step - file upload form
+3. Customer can upload the receipt image via:
+   - **Drag and drop** the image file into the upload area
+   - **Click "Seleccionar Archivo"** to browse and select the file
+
+**File Upload Process:**
+- Only **one image file** is accepted (`.png`, `.jpg`, `.jpeg`, `.gif`)
+- The form validates that the file is an image
+- A loading spinner appears during upload
+- The file is uploaded via AJAX to `zigi_payment_qr_code_callback()` (functions.php:128-201)
+- Image is stored in `/wp-content/uploads/zigi-payment-qrcode/` directory
+- Filename includes timestamp to prevent conflicts
+
+<Tip>
+The upload area supports drag-and-drop on modern browsers thanks to the HTML5 File API detection in woopro-front.js:6-9.
+</Tip>
+
+### Order Completion
+
+After successful receipt upload:
+
+1. Customer clicks **"Completar Compra"** (Complete Purchase) button
+2. System validates that exactly one image file was selected
+3. File is uploaded to server via AJAX (`zigi_payment_qr_code` action)
+4. Server responds with the uploaded file URL
+5. URL is stored in hidden field `#zigi-payment-qrcode` (paga-con-zigi.php:236)
+6. Checkout form is automatically submitted
+7. Order is processed by `process_payment()` method (paga-con-zigi.php:243-268)
+
+**Order Processing:**
+- Receipt URL is saved as order meta data: `zigi-payment-qrcode` (paga-con-zigi.php:249)
+- Order status set to **"On Hold"** (awaiting payment verification)
+- Stock levels are reduced
+- Cart is emptied
+- Customer is redirected to the Thank You page
+
+</Steps>
+
+## Customer Experience Summary
+
+<AccordionGroup>
+
+<Accordion title="What customers see at checkout">
+- Standard WooCommerce checkout form
+- "Paga con ZIGI" option in payment methods list
+- Custom description explaining QR payment process
+- Normal "Place Order" button (triggers popup)
+</Accordion>
+
+<Accordion title="What the QR popup contains">
+**First Step:**
+- Merchant's QR code image
+- Order total amount
+- Phone number link (tap to add contact)
+- Instructions for payment
+- Continue button
+- "Respaldado por Banco Industrial" footer
+
+**Second Step:**
+- File upload area with drag-and-drop
+- "Seleccionar Archivo" browse button
+- Loading spinner
+- "Completar Compra" submit button
+</Accordion>
+
+<Accordion title="Technical implementation details">
+**Key Functions:**
+- `zigi_payment_popup()` - Renders modal HTML (functions.php:20)
+- `show_qr_modal()` - Intercepts order placement (woopro-front.js:230)
+- `zigi_payment_qr_code_callback()` - Handles file upload (functions.php:128)
+- `process_payment()` - Processes order with receipt (paga-con-zigi.php:243)
+
+**Data Flow:**
+1. Customer uploads image → AJAX to `admin-ajax.php`
+2. Server saves to `/wp-content/uploads/zigi-payment-qrcode/`
+3. Returns file URL in JSON response
+4. URL stored in hidden form field
+5. Checkout form submitted with receipt URL
+6. URL saved as order meta: `zigi-payment-qrcode`
+</Accordion>
+
+</AccordionGroup>
+
+## Common Customer Questions
+
+**Q: What if the QR code doesn't scan?**
+Customers should ensure good lighting and focus. They can also tap the phone number link to add the merchant as a contact and transfer directly.
+
+**Q: Can customers upload the receipt later?**
+No. The receipt must be uploaded during the checkout process. This is the only way to attach proof of payment to the order.
+
+**Q: What image formats are accepted?**
+PNG, JPG, JPEG, and GIF files are accepted. The system validates file types both client-side (JavaScript) and server-side (PHP).
+
+**Q: What happens if upload fails?**
+An error message appears. Customers should check their internet connection and try again. If issues persist, they should contact the merchant.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Admin Workflow" icon="user-tie" href="/guide/admin-workflow">
+    Learn how to view and verify ZIGI payments in WP Admin
+  </Card>
+  <Card title="Payment Verification" icon="shield-check" href="/guide/payment-verification">
+    Best practices for verifying payment receipts
+  </Card>
+</CardGroup>

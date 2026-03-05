@@ -1,0 +1,610 @@
+---
+title: 'Hooks and Filters'
+description: 'Complete reference of WordPress hooks, filters, and actions used by Paga con ZIGI'
+---
+
+Paga con ZIGI uses WordPress hooks and filters to integrate seamlessly with WooCommerce and allow for extensibility. This page documents all available hooks, filters, and actions.
+
+## WooCommerce Integration Hooks
+
+### woocommerce_payment_gateways
+
+Registers the ZIGI payment gateway class with WooCommerce.
+
+**Type:** Filter  
+**File:** `paga-con-zigi.php:27`  
+**Function:** `zigi_payment_add_gateway_class`
+
+<CodeGroup>
+```php Usage in Plugin
+add_filter('woocommerce_payment_gateways', 'zigi_payment_add_gateway_class');
+
+function zigi_payment_add_gateway_class($gateways)
+{
+    $gateways[] = 'Zigi_Payment_WC_Gateway';
+    return $gateways;
+}
+```
+
+```php Filtering Gateway List
+// Example: Reorder payment gateways
+add_filter('woocommerce_payment_gateways', 'custom_gateway_order', 20);
+
+function custom_gateway_order($gateways) {
+    // Move ZIGI to first position
+    $zigi_key = array_search('Zigi_Payment_WC_Gateway', $gateways);
+    if ($zigi_key !== false) {
+        unset($gateways[$zigi_key]);
+        array_unshift($gateways, 'Zigi_Payment_WC_Gateway');
+    }
+    return $gateways;
+}
+```
+</CodeGroup>
+
+### woocommerce_update_options_payment_gateways_zigi_payment
+
+Triggered when admin saves the payment gateway settings.
+
+**Type:** Action  
+**File:** `paga-con-zigi.php:90`  
+**Class Method:** `Zigi_Payment_WC_Gateway::process_admin_options`
+
+<CodeGroup>
+```php Usage in Plugin
+add_action(
+    'woocommerce_update_options_payment_gateways_' . $this->id,
+    array($this, 'process_admin_options')
+);
+```
+
+```php Hook into Settings Save
+add_action('woocommerce_update_options_payment_gateways_zigi_payment', 'custom_after_zigi_settings_save', 20);
+
+function custom_after_zigi_settings_save() {
+    // Log settings changes
+    $settings = get_option('woocommerce_zigi_payment_settings');
+    error_log('ZIGI settings updated: ' . print_r($settings, true));
+    
+    // Clear cache after settings update
+    wp_cache_delete('zigi_payment_settings');
+}
+```
+</CodeGroup>
+
+## WordPress Core Hooks
+
+### before_woocommerce_init
+
+Declares compatibility with WooCommerce High-Performance Order Storage (HPOS).
+
+**Type:** Action  
+**File:** `paga-con-zigi.php:39`  
+**Function:** `zigi_payment_hpos_compatibility`  
+**Priority:** 10 (default)
+
+<CodeGroup>
+```php Usage in Plugin
+add_action('before_woocommerce_init', 'zigi_payment_hpos_compatibility');
+
+function zigi_payment_hpos_compatibility()
+{
+    if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
+            'custom_order_tables',
+            __FILE__,
+            true
+        );
+    }
+}
+```
+</CodeGroup>
+
+<Note>
+This hook ensures the plugin works correctly with WooCommerce's modern order storage system introduced in WooCommerce 7.0+.
+</Note>
+
+### plugins_loaded
+
+Initializes the payment gateway class after all plugins are loaded.
+
+**Type:** Action  
+**File:** `paga-con-zigi.php:52`  
+**Function:** `zigi_payment_init_gateway_class`  
+**Priority:** 11
+
+<CodeGroup>
+```php Usage in Plugin
+add_action('plugins_loaded', 'zigi_payment_init_gateway_class', 11);
+
+function zigi_payment_init_gateway_class()
+{
+    if (class_exists('WC_Payment_Gateway')) {
+        require_once plugin_dir_path(__FILE__) . 'functions.php';
+        
+        if (!class_exists('Zigi_Payment_WC_Gateway')) {
+            class Zigi_Payment_WC_Gateway extends WC_Payment_Gateway
+            {
+                // Gateway implementation
+            }
+        }
+    }
+}
+```
+</CodeGroup>
+
+<Warning>
+The priority is set to 11 to ensure WooCommerce is fully loaded before initializing the gateway.
+</Warning>
+
+## Asset Enqueue Hooks
+
+### admin_enqueue_scripts
+
+Enqueues admin scripts and styles for the gateway settings page.
+
+**Type:** Action  
+**File:** `functions.php:18`  
+**Function:** `zigi_payment_admin_script`
+
+<CodeGroup>
+```php Usage in Plugin
+add_action('admin_enqueue_scripts', 'zigi_payment_admin_script');
+
+function zigi_payment_admin_script()
+{
+    if (!did_action('wp_enqueue_media')) {
+        wp_enqueue_media();
+    }
+    
+    wp_enqueue_script(
+        'zigi-payment-admin',
+        plugins_url('/assets/woopro.js', __FILE__),
+        array('jquery'),
+        '1.1',
+        false
+    );
+    
+    wp_enqueue_style(
+        'zigi-payment-admin',
+        plugins_url('/assets/woopro.css', __FILE__),
+        array(),
+        '1.1'
+    );
+}
+```
+
+```php Conditionally Load Admin Assets
+add_action('admin_enqueue_scripts', 'zigi_payment_conditional_admin_assets');
+
+function zigi_payment_conditional_admin_assets($hook) {
+    // Only load on WooCommerce settings page
+    if ('woocommerce_page_wc-settings' !== $hook) {
+        return;
+    }
+    
+    // Your custom admin assets here
+}
+```
+</CodeGroup>
+
+### wp_enqueue_scripts
+
+Enqueues frontend scripts, styles, and localized data for the payment popup.
+
+**Type:** Action  
+**File:** `functions.php:99`  
+**Function:** `zigi_payment_front_script`
+
+<CodeGroup>
+```php Usage in Plugin
+add_action('wp_enqueue_scripts', 'zigi_payment_front_script');
+
+function zigi_payment_front_script()
+{
+    wp_enqueue_script(
+        'zigi_payment_qr',
+        plugins_url('assets/woopro-front.js', __FILE__),
+        array('jquery'),
+        '1.1',
+        false
+    );
+    
+    wp_enqueue_style(
+        'zigi_payment_qr',
+        plugins_url('assets/woopro-front.css', __FILE__),
+        array(),
+        '1.1'
+    );
+    
+    // Localize AJAX URL and nonce
+    wp_localize_script(
+        'zigi_payment_qr',
+        'kwajaxurl',
+        array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce'   => wp_create_nonce('zigi_payment_qr_nonce')
+        )
+    );
+    
+    // Localize translatable strings
+    wp_localize_script(
+        'zigi_payment_qr',
+        'kwp_translate',
+        array(
+            'kwp_pqr_btn_continue'  => __('Continuar', 'paga-con-zigi'),
+            'kwp_pqr_upload_images' => __('Por favor sube solo imágenes', 'paga-con-zigi'),
+        )
+    );
+}
+```
+</CodeGroup>
+
+## Upload and File Handling Hooks
+
+### upload_dir
+
+Modifies the upload directory to store payment receipts in a custom subdirectory.
+
+**Type:** Filter  
+**File:** `functions.php:169`  
+**Function:** `zigi_payment_qr_code_upload_dir`
+
+<CodeGroup>
+```php Usage in Plugin
+add_filter('upload_dir', 'zigi_payment_qr_code_upload_dir');
+
+function zigi_payment_qr_code_upload_dir($dirs)
+{
+    $custom_subdir = '/zigi-payment-qrcode';
+    
+    $new_path = $dirs['basedir'] . $custom_subdir;
+    $new_url  = $dirs['baseurl'] . $custom_subdir;
+    
+    // Create folder if it doesn't exist
+    global $wp_filesystem;
+    if (!$wp_filesystem) {
+        require_once ABSPATH . '/wp-admin/includes/file.php';
+        WP_Filesystem();
+    }
+    
+    if (!$wp_filesystem->is_dir($new_path)) {
+        $wp_filesystem->mkdir($new_path);
+        $wp_filesystem->put_contents($new_path . '/index.html', '', FS_CHMOD_FILE);
+    }
+    
+    return array_merge($dirs, array(
+        'path'   => $new_path,
+        'url'    => $new_url,
+        'subdir' => $custom_subdir,
+    ));
+}
+```
+
+```php Custom Upload Directory Structure
+function custom_zigi_upload_structure($dirs) {
+    // Organize by year/month
+    $custom_subdir = '/zigi-payments/' . date('Y/m');
+    
+    $new_path = $dirs['basedir'] . $custom_subdir;
+    $new_url  = $dirs['baseurl'] . $custom_subdir;
+    
+    wp_mkdir_p($new_path);
+    
+    return array_merge($dirs, array(
+        'path'   => $new_path,
+        'url'    => $new_url,
+        'subdir' => $custom_subdir,
+    ));
+}
+```
+</CodeGroup>
+
+<Warning>
+This filter is added and removed dynamically during the upload process (lines 169 and 186 in functions.php) to avoid affecting other uploads.
+</Warning>
+
+## AJAX Hooks
+
+### wp_ajax_zigi_payment_qr_code
+
+Handles receipt upload for logged-in users.
+
+**Type:** Action  
+**File:** `functions.php:200`  
+**Function:** `zigi_payment_qr_code_callback`
+
+### wp_ajax_nopriv_zigi_payment_qr_code
+
+Handles receipt upload for non-logged-in users (guests).
+
+**Type:** Action  
+**File:** `functions.php:201`  
+**Function:** `zigi_payment_qr_code_callback`
+
+<CodeGroup>
+```php Usage in Plugin
+add_action('wp_ajax_zigi_payment_qr_code', 'zigi_payment_qr_code_callback');
+add_action('wp_ajax_nopriv_zigi_payment_qr_code', 'zigi_payment_qr_code_callback');
+
+function zigi_payment_qr_code_callback()
+{
+    // Verify nonce
+    $wp_nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+    if (!$wp_nonce || !wp_verify_nonce($wp_nonce, 'zigi_payment_qr_nonce')) {
+        wp_send_json_error('Nonce inválido.', 403);
+    }
+    
+    // Validate file upload
+    if (!isset($_FILES['files'])) {
+        wp_send_json_error('Archivo no recibido.', 400);
+    }
+    
+    // Sanitize file data
+    $file = [
+        'name'     => sanitize_file_name($_FILES['files']['name']),
+        'type'     => sanitize_mime_type($_FILES['files']['type']),
+        'tmp_name' => sanitize_text_field($_FILES['files']['tmp_name']),
+        'error'    => absint($_FILES['files']['error']),
+        'size'     => absint($_FILES['files']['size']),
+    ];
+    
+    // Validate file type
+    $check = wp_check_filetype_and_ext($file['tmp_name'], $file['name']);
+    $ext = $check['ext'];
+    
+    if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])) {
+        wp_send_json_error('Tipo de archivo inválido.', 400);
+    }
+    
+    // Handle upload with custom directory
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    add_filter('upload_dir', 'zigi_payment_qr_code_upload_dir');
+    
+    $overrides = array(
+        'test_form' => false,
+        'mimes'     => array(
+            'jpg|jpeg' => 'image/jpeg',
+            'png'      => 'image/png',
+            'gif'      => 'image/gif',
+        ),
+    );
+    
+    // Add timestamp to filename
+    $file_name = pathinfo($file['name'], PATHINFO_FILENAME);
+    $new_filename = sanitize_file_name($file_name . '-' . time() . "." . $ext);
+    $file['name'] = $new_filename;
+    
+    $file_return = wp_handle_upload($file, $overrides);
+    
+    remove_filter('upload_dir', 'zigi_payment_qr_code_upload_dir');
+    
+    if (isset($file_return['url'])) {
+        wp_send_json_success([
+            'message' => 'Archivo subido.',
+            'url'     => esc_url_raw($file_return['url'])
+        ]);
+    } else {
+        wp_send_json_error('Falló la carga.', 500);
+    }
+    
+    wp_die();
+}
+```
+
+```php Hook into Upload Success
+add_action('wp_ajax_zigi_payment_qr_code', 'custom_after_zigi_upload', 5);
+
+function custom_after_zigi_upload() {
+    // Run before main callback
+    // Custom logging or validation
+}
+```
+
+```php JavaScript AJAX Call
+jQuery.ajax({
+    url: kwajaxurl.ajaxurl,
+    type: 'POST',
+    processData: false,
+    contentType: false,
+    data: formData,
+    success: function(response) {
+        if (response.success && response.data && response.data.url) {
+            // Receipt uploaded successfully
+            jQuery('#zigi-payment-qrcode').val(response.data.url);
+        }
+    }
+});
+```
+</CodeGroup>
+
+<Note>
+**Security Features:**
+- Nonce verification for CSRF protection
+- File type validation (only images allowed)
+- File sanitization and validation
+- Secure file naming with timestamps
+</Note>
+
+## Order and Meta Box Hooks
+
+### add_meta_boxes
+
+Adds a meta box to display the payment receipt on order edit pages.
+
+**Type:** Action  
+**File:** `functions.php:214`  
+**Function:** `zigi_payment_meta_box`
+
+<CodeGroup>
+```php Usage in Plugin
+add_action('add_meta_boxes', 'zigi_payment_meta_box');
+
+function zigi_payment_meta_box()
+{
+    if (defined('WC_VERSION') && version_compare(WC_VERSION, '7.0.0', '>=')) {
+        // HPOS compatible
+        add_meta_box(
+            'zigi-payment-meta-box',
+            __('Comprobante de Pago QR', 'paga-con-zigi'),
+            'zigi_payment_meta_box_callback',
+            'woocommerce_page_wc-orders',
+            'normal'
+        );
+    } else {
+        // Legacy post-based orders
+        add_meta_box(
+            'zigi-payment-meta-box',
+            __('Comprobante de Pago QR', 'paga-con-zigi'),
+            'zigi_payment_meta_box_callback',
+            'shop_order',
+            'normal'
+        );
+    }
+}
+
+function zigi_payment_meta_box_callback($post)
+{
+    $object = $post;
+    if (!is_object($post) || !is_a($post, 'WC_Order')) {
+        $object = wc_get_order($post->ID);
+    }
+    
+    if ($object) {
+        $zigi_payment_qrcode = $object->get_meta('zigi-payment-qrcode', true);
+        
+        if (!empty($zigi_payment_qrcode) && esc_url($zigi_payment_qrcode)) {
+            echo '<a href="' . esc_url($zigi_payment_qrcode) . '" target="_blank">';
+            echo '<img src="' . esc_url($zigi_payment_qrcode) . '" alt="Payment Receipt" width="200" height="200" loading="lazy" />';
+            echo '</a>';
+        }
+    }
+}
+```
+
+```php Add Additional Meta Box Content
+add_action('add_meta_boxes', 'custom_zigi_meta_box', 20);
+
+function custom_zigi_meta_box() {
+    add_meta_box(
+        'custom-zigi-info',
+        __('ZIGI Payment Details', 'your-textdomain'),
+        'custom_zigi_meta_box_callback',
+        'woocommerce_page_wc-orders',
+        'side'
+    );
+}
+
+function custom_zigi_meta_box_callback($post) {
+    $order = wc_get_order($post->ID);
+    
+    if ($order && $order->get_payment_method() === 'zigi_payment') {
+        $receipt_url = $order->get_meta('zigi-payment-qrcode', true);
+        
+        echo '<p><strong>Payment Method:</strong> ZIGI QR</p>';
+        echo '<p><strong>Receipt Uploaded:</strong> ' . (!empty($receipt_url) ? 'Yes' : 'No') . '</p>';
+        
+        if (!empty($receipt_url)) {
+            echo '<p><a href="' . esc_url($receipt_url) . '" class="button" target="_blank">View Receipt</a></p>';
+        }
+    }
+}
+```
+</CodeGroup>
+
+## Frontend Display Hooks
+
+### wp_footer
+
+Outputs the payment popup HTML in the site footer.
+
+**Type:** Action  
+**File:** `functions.php:72`  
+**Function:** `zigi_payment_popup`
+
+<CodeGroup>
+```php Usage in Plugin
+add_action('wp_footer', 'zigi_payment_popup');
+
+function zigi_payment_popup()
+{
+    $options = get_option('woocommerce_zigi_payment_settings');
+    ?>
+    <div class="popup-wrapper">
+        <span class="helper"></span>
+        <div class="popup-main-wrapper">
+            <div class="popupCloseButton">&times;</div>
+            <div class="first-step" data-price-limit="<?php echo esc_attr($options['limit_amount'] ?? ''); ?>">
+                <?php if (!empty($options['preview_qr'])) { ?>
+                    <img src="<?php echo esc_url($options['preview_qr']); ?>" class="popup-qr" alt="QR Code" />
+                    <span class="price"><?php echo wp_kses_post(WC()->cart->get_cart_total()); ?></span>
+                <?php } ?>
+            </div>
+            <div class="second-step">
+                <form method="post" enctype="multipart/form-data" class="box has-advanced-upload">
+                    <div class="box__input">
+                        <input type="file" name="files" id="file" class="box__file" accept=".png, .jpg, .jpeg, .gif">
+                        <label for="file">Drag and drop file to upload</label>
+                        <button type="submit" class="box__button">Select File</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <?php
+}
+```
+
+```php Conditionally Display Popup
+add_action('wp_footer', 'conditional_zigi_popup', 5);
+
+function conditional_zigi_popup() {
+    // Only show on checkout page
+    if (!is_checkout()) {
+        return;
+    }
+    
+    // Original popup function
+    zigi_payment_popup();
+}
+```
+</CodeGroup>
+
+## Hook Priority Reference
+
+<Accordion title="Understanding Hook Priorities">
+  The plugin uses specific priorities to ensure correct execution order:
+
+  - **Priority 10** (default): Most hooks run at default priority
+  - **Priority 11**: `plugins_loaded` - ensures WooCommerce is loaded first
+  - **Priority 20**: Can be used to run after plugin's main hooks
+
+  Lower numbers run earlier, higher numbers run later.
+</Accordion>
+
+## Complete Hook List
+
+| Hook Name | Type | File | Function | Priority |
+|-----------|------|------|----------|----------|
+| `woocommerce_payment_gateways` | Filter | paga-con-zigi.php:27 | `zigi_payment_add_gateway_class` | 10 |
+| `before_woocommerce_init` | Action | paga-con-zigi.php:39 | `zigi_payment_hpos_compatibility` | 10 |
+| `plugins_loaded` | Action | paga-con-zigi.php:52 | `zigi_payment_init_gateway_class` | 11 |
+| `woocommerce_update_options_payment_gateways_zigi_payment` | Action | paga-con-zigi.php:90 | `process_admin_options` | 10 |
+| `admin_enqueue_scripts` | Action | functions.php:18 | `zigi_payment_admin_script` | 10 |
+| `wp_footer` | Action | functions.php:72 | `zigi_payment_popup` | 10 |
+| `wp_enqueue_scripts` | Action | functions.php:99 | `zigi_payment_front_script` | 10 |
+| `upload_dir` | Filter | functions.php:169 | `zigi_payment_qr_code_upload_dir` | 10 |
+| `wp_ajax_zigi_payment_qr_code` | Action | functions.php:200 | `zigi_payment_qr_code_callback` | 10 |
+| `wp_ajax_nopriv_zigi_payment_qr_code` | Action | functions.php:201 | `zigi_payment_qr_code_callback` | 10 |
+| `add_meta_boxes` | Action | functions.php:214 | `zigi_payment_meta_box` | 10 |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Customization Guide" icon="paintbrush" href="/development/customization">
+    Learn how to customize and extend the plugin
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/support/troubleshooting">
+    Common issues and solutions
+  </Card>
+</CardGroup>

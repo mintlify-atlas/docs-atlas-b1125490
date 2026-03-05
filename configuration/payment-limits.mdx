@@ -1,0 +1,330 @@
+---
+title: 'Payment Limits'
+description: 'Configure minimum and maximum payment amounts with custom validation messages'
+---
+
+## Overview
+
+The Paga con ZIGI plugin allows you to set payment limits to control transaction amounts. This is useful for:
+- Complying with ZIGI daily transaction limits
+- Managing risk for high-value orders
+- Directing large purchases to alternative payment methods
+- Enforcing business rules for QR payments
+
+## Limit Configuration
+
+### Accessing Limit Settings
+
+Payment limits are configured in the plugin settings at **WooCommerce → Settings → Payments → Paga con ZIGI**.
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Go to **WooCommerce → Settings → Payments**
+  </Step>
+  
+  <Step title="Open ZIGI Settings">
+    Click **Manage** next to "Paga con ZIGI"
+  </Step>
+  
+  <Step title="Configure Limits">
+    Scroll to the "Monto Límite" and "Mensaje de Monto Límite" fields
+  </Step>
+  
+  <Step title="Save Changes">
+    Click **Save changes** at the bottom of the page
+  </Step>
+</Steps>
+
+## Limit Amount Field
+
+<ParamField path="limit_amount" type="text" default="">
+  The maximum payment amount allowed for ZIGI transactions.
+  
+  **Field Properties:**
+  - **Title:** "Monto Límite"
+  - **Type:** `text`
+  - **Default:** (empty - no limit)
+  - **Description:** "En este campo puedes ingresar el monto límite de pago"
+  
+  <Warning>
+    When a limit is set, orders exceeding this amount will display the limit message instead of the payment option.
+  </Warning>
+</ParamField>
+
+```php
+// Source: paga-con-zigi.php:127-133
+'limit_amount' => array(
+    'title'       => __('Monto Límite', 'paga-con-zigi'),
+    'type'        => 'text',
+    'description' => __('En este campo puedes ingresar el monto límite de pago', 'paga-con-zigi'),
+    'default'     => '',
+    'desc_tip'    => true,
+)
+```
+
+### How to Set Limits
+
+**Enter numeric values only:**
+- `500` - Sets limit to 500 in your store's currency
+- `1000.50` - Sets limit to 1000.50
+- Leave empty - No limit applied
+
+<Note>
+  The limit is compared against the cart total. Currency symbols are not needed - just enter the numeric amount.
+</Note>
+
+## Limit Message Field
+
+<ParamField path="message_limit_amount" type="text" default="Este método no permite pagos mayores a 500 por día.">
+  Custom message displayed to customers when their order exceeds the payment limit.
+  
+  **Field Properties:**
+  - **Title:** "Mensaje de Monto Límite"
+  - **Type:** `text`
+  - **Default:** "Este método no permite pagos mayores a 500 por día."
+  - **Description:** "Agrega el mensaje para informar sobre el límite del monto a pagar."
+  
+  This message appears in the payment popup when the cart total exceeds the configured limit.
+</ParamField>
+
+```php
+// Source: paga-con-zigi.php:134-140
+'message_limit_amount' => array(
+    'title'       => __('Mensaje de Monto Límite', 'paga-con-zigi'),
+    'type'        => 'text',
+    'description' => __('Agrega el mensaje para informar sobre el límite del monto a pagar.', 'paga-con-zigi'),
+    'default'     => __('Este método no permite pagos mayores a 500 por día.', 'paga-con-zigi'),
+    'desc_tip'    => true,
+)
+```
+
+### Effective Limit Messages
+
+Your message should:
+- Clearly state the limit
+- Explain why the limit exists
+- Suggest alternative payment methods if appropriate
+- Use friendly, helpful language
+
+**Examples:**
+
+<Accordion title="Daily Limit Message">
+```
+Este método no permite pagos mayores a Q500 por día. Por favor, usa otro método de pago para órdenes mayores.
+```
+</Accordion>
+
+<Accordion title="Transaction Limit Message">
+```
+Paga con ZIGI está disponible solo para compras de hasta Q1,000. Para órdenes mayores, selecciona transferencia bancaria.
+```
+</Accordion>
+
+<Accordion title="Regulatory Limit Message">
+```
+Por regulaciones de ZIGI, el monto máximo por transacción es Q500. Contacta con nosotros para órdenes mayores.
+```
+</Accordion>
+
+## Limit Validation
+
+The payment limit is validated on the frontend in the payment popup (functions.php:30):
+
+```php
+// Source: functions.php:30
+<div class="first-step" data-price-limit="<?php echo (isset($options['limit_amount']) && !empty($options['limit_amount'])) ? esc_attr($options['limit_amount']) : ''; ?>">
+```
+
+The limit is stored as a `data-price-limit` attribute on the popup container, which is then checked by JavaScript before allowing the payment to proceed.
+
+### How Validation Works
+
+1. **Popup Opens:** Customer clicks to pay with ZIGI
+2. **Limit Check:** JavaScript compares cart total with `data-price-limit`
+3. **Display Result:**
+   - **Within Limit:** Shows QR code and upload interface
+   - **Exceeds Limit:** Shows limit message instead
+
+### Limit Message Display
+
+The message is displayed in the popup when configured (functions.php:40-42):
+
+```php
+// Source: functions.php:40-42
+<?php if (isset($options['message_limit_amount']) && !empty($options['message_limit_amount'])) { ?>
+    <p class="message-limit-amount"><?php echo esc_attr($options['message_limit_amount']); ?></p>
+<?php } ?>
+```
+
+<Tip>
+  The limit message appears prominently in the popup, ensuring customers understand why they cannot complete payment with ZIGI.
+</Tip>
+
+## Configuration Examples
+
+### Example 1: Daily ZIGI Limit (Q500)
+
+**Use Case:** ZIGI Guatemala limits individual transactions to Q500 per day.
+
+**Configuration:**
+- **Monto Límite:** `500`
+- **Mensaje de Monto Límite:** `Este método no permite pagos mayores a Q500 por día. Por favor, selecciona otro método de pago.`
+
+### Example 2: Store Policy Limit (Q1,000)
+
+**Use Case:** Your store only accepts ZIGI for smaller purchases.
+
+**Configuration:**
+- **Monto Límite:** `1000`
+- **Mensaje de Monto Límite:** `Paga con ZIGI está disponible para compras de hasta Q1,000. Para órdenes mayores, usa transferencia bancaria o tarjeta de crédito.`
+
+### Example 3: No Limit
+
+**Use Case:** Accept ZIGI payments for any amount.
+
+**Configuration:**
+- **Monto Límite:** (leave empty)
+- **Mensaje de Monto Límite:** (not displayed, but can be left as default)
+
+<Note>
+  Even with no limit set, you may want to keep a default message configured in case you need to activate limits quickly in the future.
+</Note>
+
+## Currency Considerations
+
+The plugin works with your WooCommerce store currency settings. The limit amount should be entered in your store's base currency.
+
+**Example:**
+- **Store Currency:** GTQ (Guatemalan Quetzal)
+- **Limit Amount:** `500` = Q500
+- **Cart Total:** Q450 ✅ (allowed)
+- **Cart Total:** Q600 ❌ (exceeds limit)
+
+<Warning>
+  If you change your store's currency, remember to update the payment limit and message to reflect the new currency.
+</Warning>
+
+## Testing Limits
+
+<Steps>
+  <Step title="Set a Test Limit">
+    Configure a low limit (e.g., `10`) for testing purposes
+  </Step>
+  
+  <Step title="Add Low-Value Product">
+    Add a product below the limit to your cart
+  </Step>
+  
+  <Step title="Test Within Limit">
+    Proceed to checkout, select ZIGI, and verify the QR code appears
+  </Step>
+  
+  <Step title="Add High-Value Product">
+    Increase cart total above the limit
+  </Step>
+  
+  <Step title="Test Exceeds Limit">
+    Verify the limit message appears instead of the QR code
+  </Step>
+  
+  <Step title="Reset Limit">
+    Set the limit back to your actual business requirement
+  </Step>
+</Steps>
+
+## Popup Cart Total Display
+
+The current cart total is always displayed in the payment popup (functions.php:39):
+
+```php
+// Source: functions.php:39
+<span class="price"><?php esc_html_e('Monto a Pagar', 'paga-con-zigi'); ?><?php echo wp_kses_post(WC()->cart->get_cart_total()); ?></span>
+```
+
+This helps customers verify the amount before scanning the QR code.
+
+## Best Practices
+
+<Accordion title="Set Realistic Limits">
+  Research ZIGI's actual transaction limits for Guatemala and set your limits accordingly. As of the plugin version, Q500 per day is mentioned as a common limit.
+</Accordion>
+
+<Accordion title="Clear Communication">
+  Your limit message should:
+  - State the specific limit amount
+  - Mention if it's daily, per transaction, or another period
+  - Suggest alternative payment methods
+  - Use the store's currency symbol
+</Accordion>
+
+<Accordion title="Regular Updates">
+  If ZIGI changes their limits or policies:
+  - Update your limit amount immediately
+  - Revise your message to reflect changes
+  - Notify customers if significant changes occur
+</Accordion>
+
+<Accordion title="Consider Shipping">
+  Remember that the limit applies to the cart total, which includes:
+  - Product prices
+  - Taxes
+  - Shipping costs
+  - Any other fees
+  
+  Set limits with total order cost in mind, not just product prices.
+</Accordion>
+
+## Troubleshooting
+
+### Limit Not Working
+
+**Problem:** Orders above the limit still show the QR code.
+
+**Solutions:**
+1. Verify the limit is saved in settings
+2. Clear browser cache and refresh checkout page
+3. Check that JavaScript is not blocked
+4. Look for JavaScript errors in browser console
+
+### Message Not Displaying
+
+**Problem:** The limit message doesn't appear when limit is exceeded.
+
+**Solutions:**
+1. Ensure the message field is not empty
+2. Save settings after entering the message
+3. Verify the limit is actually being exceeded
+4. Check the popup HTML source for the message element
+
+### Wrong Currency Display
+
+**Problem:** Limit message shows wrong currency.
+
+**Solutions:**
+1. Update the message text to match your store currency
+2. Verify WooCommerce currency settings are correct
+3. Manually type the correct currency symbol in the message
+
+## Advanced: Programmatic Limit Control
+
+Developers can filter the limit amount programmatically:
+
+```php
+// Example: Dynamically adjust limit based on user role
+add_filter('option_woocommerce_zigi_payment_settings', function($settings) {
+    if (current_user_can('wholesale_customer')) {
+        $settings['limit_amount'] = '2000'; // Higher limit for wholesale
+    }
+    return $settings;
+});
+```
+
+<Warning>
+  Custom code modifications should be added to your theme's `functions.php` or a custom plugin, not directly to the payment gateway plugin files.
+</Warning>
+
+## Related Documentation
+
+- [Plugin Settings](/configuration/settings) - Configure all plugin options
+- [QR Setup](/configuration/qr-setup) - Upload and manage the QR code
+- [Quickstart Guide](/quickstart) - Initial setup instructions

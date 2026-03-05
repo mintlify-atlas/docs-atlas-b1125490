@@ -1,0 +1,520 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for the Paga con ZIGI payment gateway
+---
+
+## Common Issues and Solutions
+
+This guide covers the most common issues you may encounter with the Paga con ZIGI plugin and how to resolve them.
+
+<AccordionGroup>
+  <Accordion title="Plugin not appearing in payment methods">
+    
+### Symptoms
+- Paga con ZIGI is not visible in WooCommerce > Settings > Payments
+- Payment method doesn't show up at checkout
+
+### Solutions
+
+**1. Verify WooCommerce is installed and active**
+
+The plugin requires WooCommerce to function. Check that:
+- WooCommerce plugin is installed and activated
+- WooCommerce version is 9.3 or lower (tested compatibility)
+
+```bash
+WordPress Admin > Plugins > Installed Plugins
+```
+
+**2. Check plugin initialization**
+
+The plugin registers itself via the `woocommerce_payment_gateways` filter at `paga-con-zigi.php:27`. Ensure:
+- The plugin is activated
+- No PHP errors are preventing initialization
+- Check WordPress debug log for errors
+
+**3. Enable the payment method**
+
+Navigate to:
+```
+WooCommerce > Settings > Payments
+```
+Find "Paga con ZIGI" and toggle it to enabled.
+
+<Note>
+The plugin class `Zigi_Payment_WC_Gateway` is registered during the `plugins_loaded` hook at priority 11, so it loads after WooCommerce.
+</Note>
+
+  </Accordion>
+
+  <Accordion title="QR code not displaying">
+    
+### Symptoms
+- QR code image is missing in checkout popup
+- Broken image icon appears
+- Popup shows but no QR is visible
+
+### Solutions
+
+**1. Upload the QR code image**
+
+The QR code must be manually uploaded in the plugin settings:
+
+1. Go to `WooCommerce > Settings > Payments > Paga con ZIGI`
+2. Click "Seleccionar Imagen QR" button
+3. Upload your ZIGI QR code image
+4. Save changes
+
+**2. Verify image is saved correctly**
+
+Check the plugin settings in the database:
+```php
+$options = get_option('woocommerce_zigi_payment_settings');
+var_dump($options['preview_qr']);
+```
+
+The `preview_qr` field should contain a valid image URL.
+
+**3. Check file permissions**
+
+Ensure WordPress can read the uploaded image:
+```bash
+ls -la wp-content/uploads/
+```
+
+Files should have permissions `644` and directories `755`.
+
+**4. Browser console errors**
+
+Open browser Developer Tools (F12) and check the Console tab for:
+- 404 errors on image URLs
+- CORS or mixed content warnings
+- JavaScript errors preventing popup display
+
+<Warning>
+The QR code is displayed via `functions.php:35`. If the `preview_qr` option is empty, the image won't render in the popup.
+</Warning>
+
+  </Accordion>
+
+  <Accordion title="Receipt upload failing">
+    
+### Symptoms
+- "Error de red" message appears
+- Upload progress indicator stays visible
+- File selection doesn't trigger upload
+- "Por favor sube solo imágenes" error
+
+### Solutions
+
+**1. Verify file type**
+
+Only image files are accepted. Supported formats:
+- JPG / JPEG
+- PNG
+- GIF
+
+The validation occurs at:
+- Client-side: `woopro-front.js:52` (browser validation)
+- Server-side: `functions.php:164` (PHP validation)
+
+**2. Check file size limits**
+
+Verify PHP upload limits:
+```bash
+php -i | grep upload_max_filesize
+php -i | grep post_max_size
+```
+
+Increase limits in `php.ini` if needed:
+```ini
+upload_max_filesize = 10M
+post_max_size = 10M
+```
+
+**3. Verify nonce validation**
+
+The upload uses WordPress nonce for security (`functions.php:133`). If you're getting 403 errors:
+- Clear browser cache
+- Try a different browser
+- Check if caching plugins are interfering
+
+**4. Check upload directory permissions**
+
+Receipts are stored in `wp-content/uploads/zigi-payment-qrcode/`. Verify:
+```bash
+ls -la wp-content/uploads/
+ls -la wp-content/uploads/zigi-payment-qrcode/
+```
+
+The directory is created automatically (`functions.php:116`), but ensure:
+- Parent directory is writable
+- Web server user has write permissions
+
+**Fix permissions:**
+```bash
+chmod 755 wp-content/uploads/
+chmod 755 wp-content/uploads/zigi-payment-qrcode/
+```
+
+**5. AJAX endpoint issues**
+
+The upload uses the WordPress AJAX API:
+- Action: `zigi_payment_qr_code`
+- Endpoint: `admin-ajax.php`
+
+Verify the AJAX URL is correct:
+```javascript
+console.log(kwajaxurl.ajaxurl);
+// Should output: /wp-admin/admin-ajax.php
+```
+
+<Tip>
+Enable WordPress debug mode to see detailed error messages:
+```php
+define('WP_DEBUG', true);
+define('WP_DEBUG_LOG', true);
+```
+Check `wp-content/debug.log` for errors.
+</Tip>
+
+  </Accordion>
+
+  <Accordion title="Payment status not updating">
+    
+### Symptoms
+- Order remains in "On Hold" status
+- Payment receipt is uploaded but order isn't completed
+- Customer complains payment isn't recognized
+
+### Expected Behavior
+
+Paga con ZIGI is a **manual payment method** similar to bank transfer. The workflow is:
+
+1. Customer selects payment method
+2. Scans QR code and pays via ZIGI app
+3. Uploads payment receipt
+4. Order is placed with "On Hold" status (`paga-con-zigi.php:255`)
+5. **Store admin must manually verify and approve the payment**
+
+### Manual Verification Process
+
+**1. View the receipt**
+
+In WordPress Admin:
+```
+WooCommerce > Orders > [Select Order]
+```
+
+Scroll to the "Comprobante de Pago QR" meta box (`functions.php:208`). The uploaded receipt image will be displayed.
+
+**2. Verify payment in ZIGI app**
+
+Confirm the payment was received in your ZIGI account:
+- Check transaction amount matches order total
+- Verify timestamp
+- Match receipt image to ZIGI transaction
+
+**3. Update order status**
+
+Once verified:
+- Change order status from "On Hold" to "Processing" or "Completed"
+- Add order note (optional) with verification details
+- Customer will receive order confirmation email
+
+<Note>
+This plugin does **not** provide automatic payment verification. It's designed for manual review to prevent fraud and ensure payment accuracy.
+</Note>
+
+  </Accordion>
+
+  <Accordion title="HPOS compatibility issues">
+    
+### Symptoms
+- Receipt meta box not appearing on order edit page
+- Receipt data not saving
+- Errors after enabling High-Performance Order Storage
+
+### Solutions
+
+**1. Verify HPOS compatibility is declared**
+
+The plugin declares HPOS compatibility at `paga-con-zigi.php:39-46`. This is automatically handled.
+
+**2. Check WooCommerce version**
+
+HPOS is available in WooCommerce 7.0+. The plugin is tested up to WooCommerce 9.3.
+
+**3. Meta box registration**
+
+The plugin registers the receipt meta box for both:
+- Traditional orders: `shop_order` post type
+- HPOS orders: `woocommerce_page_wc-orders` screen
+
+See `functions.php:207-211` for implementation.
+
+**4. Meta data storage**
+
+Receipt URLs are stored using WooCommerce's order meta API:
+```php
+$order->update_meta_data('zigi-payment-qrcode', $url);
+$order->save();
+```
+
+This is compatible with both traditional and HPOS storage.
+
+**5. Test HPOS compatibility**
+
+In `WooCommerce > Settings > Advanced > Features`, you can:
+- Enable/disable HPOS
+- Test the plugin in both modes
+
+<Warning>
+If you're still using WooCommerce < 7.0, HPOS is not available. The plugin will work with traditional post-based orders.
+</Warning>
+
+  </Accordion>
+
+  <Accordion title="File permissions problems">
+    
+### Symptoms
+- "Falló la carga" error message
+- 500 Internal Server Error during upload
+- Receipts not saving to server
+
+### Solutions
+
+**1. Check WordPress uploads directory**
+
+Verify the main uploads directory exists and is writable:
+```bash
+ls -la wp-content/
+drwxr-xr-x wp-content/uploads
+```
+
+**2. Create custom upload directory**
+
+The plugin creates `wp-content/uploads/zigi-payment-qrcode/` automatically (`functions.php:115-118`).
+
+If creation fails, manually create it:
+```bash
+mkdir wp-content/uploads/zigi-payment-qrcode
+chmod 755 wp-content/uploads/zigi-payment-qrcode
+chown www-data:www-data wp-content/uploads/zigi-payment-qrcode
+```
+
+(Replace `www-data` with your web server user)
+
+**3. Verify WP_Filesystem is initialized**
+
+The plugin uses WordPress Filesystem API. Ensure:
+- FTP credentials are not required
+- Direct filesystem access is available
+
+Test with:
+```php
+global $wp_filesystem;
+if (WP_Filesystem()) {
+    echo 'Filesystem initialized';
+}
+```
+
+**4. Check PHP file upload settings**
+
+Verify PHP configuration:
+```bash
+php -i | grep file_uploads
+```
+
+Should output:
+```
+file_uploads => On
+```
+
+**5. Security plugins interference**
+
+Some security plugins block file uploads. Temporarily disable security plugins to test.
+
+**6. Server-level restrictions**
+
+Check `.htaccess` for upload restrictions:
+```apache
+# Ensure this is NOT present
+<Files ~ "\.(jpg|jpeg|png|gif)$">
+    Order deny,allow
+    Deny from all
+</Files>
+```
+
+<Tip>
+The plugin creates an `index.html` file in the upload directory (`functions.php:117`) to prevent directory listing. This is a security best practice.
+</Tip>
+
+  </Accordion>
+
+  <Accordion title="JavaScript errors in checkout">
+    
+### Symptoms
+- Popup doesn't open when clicking "Place Order"
+- "Continue" button doesn't work
+- File upload interface not responding
+
+### Solutions
+
+**1. Check for JavaScript conflicts**
+
+Open browser Developer Tools (F12) > Console tab. Look for:
+- jQuery errors
+- Undefined variable errors
+- Script loading failures
+
+**2. Verify jQuery is loaded**
+
+The plugin requires jQuery (`functions.php:78`). In browser console:
+```javascript
+typeof jQuery
+// Should return: "function"
+```
+
+**3. Check script dependencies**
+
+Verify plugin scripts are enqueued:
+```javascript
+// In browser console, check if these are loaded:
+typeof show_qr_modal
+typeof kwajaxurl
+```
+
+**4. Theme compatibility**
+
+Some themes override checkout scripts. Try:
+- Switching to a default WordPress theme (Twenty Twenty-Four)
+- Testing if the issue persists
+
+**5. Script load order**
+
+The plugin enqueues scripts at `wp_enqueue_scripts` hook (`functions.php:99`). Ensure your theme calls:
+```php
+wp_head();
+wp_footer();
+```
+
+**6. Caching issues**
+
+Clear all caches:
+- Browser cache (Ctrl+Shift+R)
+- WordPress cache plugins
+- Server-side caching (Redis, Memcached)
+- CDN cache
+
+<Note>
+The plugin scripts are versioned as `1.1`. If you modify the scripts, increment the version number to bust browser caches.
+</Note>
+
+  </Accordion>
+
+  <Accordion title="Popup not appearing at checkout">
+    
+### Symptoms
+- Order places immediately without showing QR popup
+- No modal window appears
+- Payment method selected but no interaction prompt
+
+### Solutions
+
+**1. Verify payment method selection**
+
+The popup only appears when "Paga con ZIGI" is selected. Check:
+```javascript
+// The popup trigger checks:
+if (paymentMethod == "zigi_payment") {
+    // Show popup
+}
+```
+
+**2. Check CSS loading**
+
+Verify the popup stylesheet is loaded:
+```bash
+View Page Source > Search for: woopro-front.css
+```
+
+The CSS controls popup visibility. If missing:
+- Clear cache
+- Check for CSS minification issues
+- Verify `functions.php:79` is executing
+
+**3. Inspect popup HTML**
+
+The popup is rendered in footer (`functions.php:72`). In browser:
+```javascript
+document.querySelector('.popup-wrapper')
+// Should not return null
+```
+
+**4. Theme footer hook**
+
+Ensure your theme calls:
+```php
+wp_footer();
+```
+
+Without this, the popup HTML won't be rendered.
+
+**5. JavaScript event binding**
+
+The popup is triggered by checkout form submission (`woopro-front.js:267-268`):
+```javascript
+$('form.checkout').on('submit', show_qr_modal);
+$('form.checkout').on('click', '#place_order', show_qr_modal);
+```
+
+Verify:
+- WooCommerce checkout form has class `checkout`
+- Place order button has ID `place_order`
+
+<Warning>
+If your theme heavily customizes the WooCommerce checkout, the event selectors may not match. You may need to adjust the JavaScript selectors.
+</Warning>
+
+  </Accordion>
+</AccordionGroup>
+
+## Still Having Issues?
+
+If you've tried the solutions above and are still experiencing problems:
+
+1. **Enable debug mode** to get detailed error messages:
+   ```php
+   // In wp-config.php
+   define('WP_DEBUG', true);
+   define('WP_DEBUG_LOG', true);
+   define('WP_DEBUG_DISPLAY', false);
+   ```
+
+2. **Check system requirements**:
+   - WordPress 5.2 or higher
+   - WooCommerce (tested up to 9.3)
+   - PHP 7.4 or higher
+   - Modern browser with JavaScript enabled
+
+3. **Test in isolation**:
+   - Deactivate all plugins except WooCommerce and Paga con ZIGI
+   - Switch to a default WordPress theme
+   - Test if the issue persists
+
+4. **Review server logs**:
+   - PHP error log
+   - WordPress debug log (`wp-content/debug.log`)
+   - Web server error log (Apache/Nginx)
+
+5. **Contact support** at [clientes@neopunto.com](mailto:clientes@neopunto.com) with:
+   - WordPress and WooCommerce versions
+   - PHP version
+   - Description of the issue
+   - Any error messages from logs
+   - Screenshots if applicable
+
+<Tip>
+When reporting issues, include your WordPress environment details. Go to `WooCommerce > Status > System Status` and use the "Get system report" button to copy technical details.
+</Tip>

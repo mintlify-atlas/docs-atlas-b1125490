@@ -1,0 +1,370 @@
+---
+title: Installation
+description: Step-by-step guide to installing and activating the Paga con ZIGI payment gateway plugin
+---
+
+## Prerequisites
+
+Before installing Paga con ZIGI, verify that your WordPress site meets the minimum requirements:
+
+<CardGroup cols={2}>
+  <Card title="WordPress 5.2+" icon="wordpress">
+    Tested up to WordPress 6.6
+  </Card>
+  <Card title="WooCommerce Active" icon="cart-shopping">
+    Tested up to WooCommerce 9.3
+  </Card>
+  <Card title="PHP 7.4+" icon="php">
+    Minimum PHP version required
+  </Card>
+  <Card title="ZIGI Account" icon="mobile">
+    Active account with QR code
+  </Card>
+</CardGroup>
+
+<Warning>
+  **WooCommerce is required!** This plugin will not work without WooCommerce installed and activated. Install WooCommerce first before proceeding.
+</Warning>
+
+## Installation Methods
+
+You can install Paga con ZIGI using either of these methods:
+
+<Tabs>
+  <Tab title="Manual Upload">
+    ### Method 1: Manual Upload via WordPress Admin
+
+    <Steps>
+      <Step title="Download the Plugin">
+        Download the plugin ZIP file from the repository or source location
+      </Step>
+      
+      <Step title="Access WordPress Admin">
+        Log in to your WordPress admin dashboard
+        
+        Navigate to: **Plugins → Add New → Upload Plugin**
+      </Step>
+      
+      <Step title="Upload ZIP File">
+        Click **Choose File** and select the `paga-con-zigi.zip` file
+        
+        Click **Install Now**
+        
+        <Note>
+          The upload may take a few moments depending on your server speed
+        </Note>
+      </Step>
+      
+      <Step title="Activate the Plugin">
+        After installation completes, click **Activate Plugin**
+        
+        You'll be redirected to the Plugins page with a success message
+      </Step>
+    </Steps>
+  </Tab>
+  
+  <Tab title="FTP/File Manager">
+    ### Method 2: FTP or File Manager Upload
+
+    <Steps>
+      <Step title="Extract Plugin Files">
+        Extract the plugin ZIP file on your local computer
+        
+        You should see a folder named `paga-con-zigi` containing the plugin files
+      </Step>
+      
+      <Step title="Connect to Your Server">
+        Connect to your server using:
+        - FTP client (FileZilla, Cyberduck, etc.)
+        - cPanel File Manager
+        - SSH/SFTP access
+      </Step>
+      
+      <Step title="Navigate to Plugins Directory">
+        Navigate to your WordPress plugins directory:
+        
+        ```bash
+        /wp-content/plugins/
+        ```
+        
+        <Tip>
+          If you're not sure where your WordPress installation is located, look for the `wp-config.php` file in your root directory.
+        </Tip>
+      </Step>
+      
+      <Step title="Upload Plugin Folder">
+        Upload the entire `paga-con-zigi` folder to `/wp-content/plugins/`
+        
+        The final path should be:
+        ```bash
+        /wp-content/plugins/paga-con-zigi/
+        ```
+      </Step>
+      
+      <Step title="Activate from WordPress Admin">
+        Go to your WordPress admin: **Plugins → Installed Plugins**
+        
+        Find **Paga con ZIGI** in the list
+        
+        Click **Activate**
+      </Step>
+    </Steps>
+  </Tab>
+  
+  <Tab title="Git Clone">
+    ### Method 3: Git Clone (For Developers)
+
+    <Steps>
+      <Step title="SSH into Your Server">
+        Connect to your server via SSH:
+        
+        ```bash
+        ssh username@your-server.com
+        ```
+      </Step>
+      
+      <Step title="Navigate to Plugins Directory">
+        Change to the WordPress plugins directory:
+        
+        ```bash
+        cd /path/to/wordpress/wp-content/plugins/
+        ```
+      </Step>
+      
+      <Step title="Clone the Repository">
+        Clone the plugin repository:
+        
+        ```bash
+        git clone https://github.com/yourusername/paga-con-zigi.git
+        ```
+        
+        <Note>
+          Replace the repository URL with the actual Git repository location
+        </Note>
+      </Step>
+      
+      <Step title="Set Permissions">
+        Ensure proper file permissions:
+        
+        ```bash
+        cd paga-con-zigi
+        chmod -R 755 .
+        chown -R www-data:www-data .
+        ```
+        
+        <Warning>
+          Adjust `www-data` to match your server's web user (might be `apache`, `nginx`, etc.)
+        </Warning>
+      </Step>
+      
+      <Step title="Activate the Plugin">
+        Go to **Plugins → Installed Plugins** in WordPress admin
+        
+        Click **Activate** next to Paga con ZIGI
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Verify Installation
+
+After activating the plugin, verify that it's installed correctly:
+
+<Steps>
+  <Step title="Check Plugin Status">
+    Navigate to **Plugins → Installed Plugins**
+    
+    Confirm "Paga con ZIGI" shows as **Active**
+    
+    Plugin details should display:
+    - **Version**: 2.0.0
+    - **Author**: Andrés Turcios
+    - **Description**: Método de pago para WooCommerce que permite realizar pagos escaneando un código QR
+  </Step>
+  
+  <Step title="Verify WooCommerce Integration">
+    Go to **WooCommerce → Settings → Payments**
+    
+    You should see "Paga con ZIGI" listed as an available payment method
+    
+    <Info>
+      The payment method will be disabled by default. You'll need to configure and enable it before use.
+    </Info>
+  </Step>
+  
+  <Step title="Check for Errors">
+    If you don't see the plugin in WooCommerce payments:
+    
+    1. Verify WooCommerce is installed and active
+    2. Check for PHP errors in **Tools → Site Health → Info → Server**
+    3. Ensure PHP version is 7.4 or higher
+    4. Review error logs in `/wp-content/debug.log` (if debugging enabled)
+  </Step>
+</Steps>
+
+## File Structure
+
+Once installed, the plugin structure should look like this:
+
+```bash
+/wp-content/plugins/paga-con-zigi/
+├── assets/
+│   ├── woopro.js              # Admin JavaScript
+│   ├── woopro.css             # Admin styles
+│   ├── woopro-front.js        # Frontend JavaScript
+│   ├── woopro-front.css       # Frontend styles
+│   └── loader.gif             # Loading animation
+├── functions.php              # Core functionality
+├── paga-con-zigi.php          # Main plugin file
+└── README.md                  # Documentation
+```
+
+## Plugin Registration
+
+The plugin registers itself with WooCommerce through these key hooks:
+
+```php
+// Register as WooCommerce payment gateway
+add_filter('woocommerce_payment_gateways', 'zigi_payment_add_gateway_class');
+
+// Declare HPOS compatibility
+add_action('before_woocommerce_init', 'zigi_payment_hpos_compatibility');
+
+// Initialize gateway class
+add_action('plugins_loaded', 'zigi_payment_init_gateway_class', 11);
+```
+
+The gateway class extends WooCommerce's base payment gateway:
+
+```php
+class Zigi_Payment_WC_Gateway extends WC_Payment_Gateway
+{
+    public function __construct()
+    {
+        $this->id = 'zigi_payment';
+        $this->method_title = __('Paga con ZIGI', 'paga-con-zigi');
+        $this->method_description = __('Método de pago QR ZIGI.', 'paga-con-zigi');
+        $this->supports = array('products');
+        
+        $this->init_form_fields();
+        $this->init_settings();
+    }
+}
+```
+
+## Troubleshooting Installation
+
+<AccordionGroup>
+  <Accordion title="Plugin doesn't appear in WooCommerce Payments">
+    **Solution:**
+    
+    1. Confirm WooCommerce is installed and activated
+    2. Deactivate and reactivate Paga con ZIGI
+    3. Clear WordPress cache (if using a caching plugin)
+    4. Check that the main plugin file is named `paga-con-zigi.php`
+  </Accordion>
+  
+  <Accordion title="'The plugin does not have a valid header' error">
+    **Solution:**
+    
+    This usually means the plugin files are in the wrong location.
+    
+    Ensure the structure is:
+    ```
+    /wp-content/plugins/paga-con-zigi/paga-con-zigi.php
+    ```
+    
+    Not:
+    ```
+    /wp-content/plugins/paga-con-zigi/paga-con-zigi/paga-con-zigi.php
+    ```
+  </Accordion>
+  
+  <Accordion title="'Plugin requires WooCommerce' error">
+    **Solution:**
+    
+    1. Install WooCommerce from **Plugins → Add New**
+    2. Activate WooCommerce
+    3. Complete WooCommerce setup wizard
+    4. Then activate Paga con ZIGI
+  </Accordion>
+  
+  <Accordion title="File permission errors">
+    **Solution:**
+    
+    Set proper permissions on the plugin directory:
+    
+    ```bash
+    chmod -R 755 /wp-content/plugins/paga-con-zigi
+    chown -R www-data:www-data /wp-content/plugins/paga-con-zigi
+    ```
+    
+    <Warning>
+      Replace `www-data` with your server's actual web user
+    </Warning>
+  </Accordion>
+  
+  <Accordion title="PHP version incompatibility">
+    **Solution:**
+    
+    The plugin requires PHP 7.4 or higher. Check your PHP version:
+    
+    ```bash
+    php -v
+    ```
+    
+    Or in WordPress: **Tools → Site Health → Info → Server**
+    
+    Contact your hosting provider to upgrade PHP if needed.
+  </Accordion>
+</AccordionGroup>
+
+## Upload Directory Creation
+
+The plugin automatically creates a custom upload directory for payment receipts:
+
+```php
+function zigi_payment_qr_code_upload_dir($dirs)
+{
+    $custom_subdir = '/zigi-payment-qrcode';
+    $new_path = $dirs['basedir'] . $custom_subdir;
+    $new_url  = $dirs['baseurl'] . $custom_subdir;
+    
+    // Creates folder if it doesn't exist
+    if (! $wp_filesystem->is_dir($new_path)) {
+        $wp_filesystem->mkdir($new_path);
+        $wp_filesystem->put_contents($new_path . '/index.html', '', FS_CHMOD_FILE);
+    }
+    
+    return array_merge($dirs, array(
+        'path'   => $new_path,
+        'url'    => $new_url,
+        'subdir' => $custom_subdir,
+    ));
+}
+```
+
+This directory is located at:
+```bash
+/wp-content/uploads/zigi-payment-qrcode/
+```
+
+<Tip>
+  The plugin creates an `index.html` file in the upload directory to prevent direct directory listing for security.
+</Tip>
+
+## Next Steps
+
+Now that the plugin is installed, you're ready to configure it:
+
+<Card title="Quick Start Guide" icon="rocket" href="/quickstart" iconType="solid" color="#00A99D">
+  Learn how to configure Paga con ZIGI and accept your first payment
+</Card>
+
+## Support
+
+If you encounter issues during installation:
+
+- **Email**: clientes@neopunto.com
+- **Website**: [https://neopunto.com](https://neopunto.com)
+- **Documentation**: [Complete Setup Guide](https://neopunto.com/guia-de-como-cobrar-con-zigi-mediante-codigo-qr-en-wordpress-gratis/)
